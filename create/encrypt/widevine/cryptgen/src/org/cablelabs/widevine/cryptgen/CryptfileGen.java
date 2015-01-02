@@ -66,7 +66,7 @@ public class CryptfileGen {
     private static void usage() {
         System.out.println("Google Widevine MP4Box cryptfile generation tool.");
         System.out.println("");
-        System.out.println("usage:  CryptfileGen [OPTIONS] <content_id> <track_id>:<track_type>] [<track_id>:<track_type>]...");
+        System.out.println("usage:  CryptfileGen [OPTIONS] <content_id> <track_id>:<track_type> [<track_id>:<track_type>]...");
         System.out.println("");
         System.out.println("\t<content_id> is a unique string representing the content to be encrypted");
         System.out.println("");
@@ -108,7 +108,6 @@ public class CryptfileGen {
     }
     
     private static void invalidOption(String option) {
-        usage();
         errorExit("Invalid argument specification for " + option);
     }
     
@@ -170,7 +169,8 @@ public class CryptfileGen {
             // Parse options
             if (args[i].startsWith("-")) {
                 String[] subopts;
-                if ((subopts = checkOption("-help", args, i, 0)) != null) {
+                if ((subopts = checkOption("-help", args, i, 0)) != null ||
+                     (subopts = checkOption("-h", args, i, 0)) != null) {
                     usage();
                     System.exit(0);
                 }
@@ -202,7 +202,6 @@ public class CryptfileGen {
                     i++;
                 }
                 else {
-                    usage();
                     errorExit("Illegal argument: " + args[i]);
                 }
                 
@@ -232,12 +231,20 @@ public class CryptfileGen {
             }
         }
         
+        if (content_id_str == null) {
+            errorExit("Must specify content_id string!");
+        }
+        
         // Request keys
         List<Track> trackList = new ArrayList<Track>();
         for (Track t : track_args) {
             if (t != null)
                 trackList.add(t);
         }
+        if (trackList.isEmpty()) {
+            errorExit("Must specify at least one track!");
+        }
+        
         KeyRequest request = (rollingKeyCount != -1 && rollingKeyStart != -1) ?
             new KeyRequest(content_id_str, trackList, rollingKeyStart, rollingKeyCount) :
             new KeyRequest(content_id_str, trackList);
