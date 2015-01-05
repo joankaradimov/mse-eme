@@ -1,4 +1,4 @@
-#!/bin/bash 
+#!/bin/bash
 
 # Copyright (c) 2014, CableLabs, Inc.
 # All rights reserved.
@@ -78,7 +78,7 @@ if [ -z $output_dir ]; then
   usage
   exit 1
 fi
-if [ -z $input_dir -a ${#@} -eq 0 ]; then
+if [ -z $input_dir ] && [ ${#@} -eq 0 ]; then
   echo "No input media files specified!"
   usage
   exit 0
