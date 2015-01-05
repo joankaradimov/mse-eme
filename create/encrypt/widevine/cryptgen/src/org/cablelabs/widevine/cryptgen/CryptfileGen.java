@@ -253,12 +253,14 @@ public class CryptfileGen {
                 request.setSigningProperties(signingFile);
             }
             catch (Exception e) {
-                errorExit("Error in signing file: " + e.getMessage());
+                System.err.println("Error in signing file: " + e.getMessage());
+                System.exit(1);
             }
         }
         ResponseMessage m = request.requestKeys();
         if (m.status != ResponseMessage.StatusCode.OK) {
-            errorExit("Received error from key server! Code = " + m.status.toString());
+            System.err.println("Received error from key server! Code = " + m.status.toString());
+            System.exit(1);
         }
     
         // The Widevine key server provides the PSSH data directly to us.  Optionally, we could
