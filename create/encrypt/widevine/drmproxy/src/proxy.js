@@ -91,8 +91,8 @@ urlParsed.method = 'POST';
 console.log("Starting proxy server.  DRM Server Info:");
 console.log(wvServer);
 
-var addCORSHeaders = function(res, length) {
-    res.writeHeader(200, {
+var addCORSHeaders = function(code, res, length) {
+    res.writeHeader(code, {
         "Content-Length": length,
         "Content-Type": 'application/json',
         "Access-Control-Allow-Origin": '*',
@@ -122,6 +122,7 @@ var sendLicenseRequest = function(data) {
         var sha1Hash = crypto.createHash("sha1");
         sha1Hash.update(requestMessageJSON, "utf8");
         var sha1 = sha1Hash.digest();
+        console.log("SHA1 hash of request message is " + sha1.toString("base64"));
 
         var aesCipher = crypto.createCipheriv("aes-256-cbc",
                 (new Buffer(wvServer.key, "base64")), (new Buffer(wvServer.iv, "base64")));
@@ -184,44 +185,37 @@ if (!hashFound) {
 
 http.createServer(function(req, res) {
 
-    var sendResponse = function(resp) {
-        var respJSON = JSON.stringify(resp);
-        addCORSHeaders(res, respJSON.length);
-        res.write(respJSON);
+    var sendResponse = function(code, msg) {
+        addCORSHeaders(code, res, msg.length);
+        res.write(msg);
         res.end();
     };
 
-    var payload = "";
+    var payload = [];
     req.on('data', function(data) {
-        payload += data;
+        payload.push(data);
     });
     req.on('end', function() {
 
-        console.log("Request received! Data length = " + payload.length);
+        var buffer = Buffer.concat(payload);
+        console.log("Request received! Data length = " + buffer.length);
 
-        var proxyResp = {};
-        sendLicenseRequest(payload).then(
+        sendLicenseRequest(buffer).then(
                 function (response_data) {
                     var respJSON = JSON.parse(response_data);
 
-
+                    console.log("License server returned status " + respJSON.status);
                     if (respJSON.status === "OK") {
-                        proxyResp.status = "OK";
-                        proxyResp.message = "";
-                        proxyResp.license = respJSON.license;
+                        sendResponse(200, new Buffer(respJSON.license, "base64"));
                     }
                     else {
-                        proxyResp.status = "ERROR";
-                        proxyResp.message = respJSON.status;
+                        sendResponse(400, respJSON.status);
                     }
-                    sendResponse(proxyResp);
                 },
                 function (error) {
                     var message = "Error in request to license server: " + error;
                     console.log(message);
-                    proxyResp.status = "ERROR";
-                    proxyResp.message = message;
-                    sendResponse(proxyResp);
+                    sendResponse(400, message);
                 }
         );
     });
