@@ -25,13 +25,13 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
-avconv=avconv
+avconv=ffmpeg
 
 function usage {
   echo ""
   echo "Transcode/Transrate Script"
   echo "usage:"
-  echo "   video_scaled_demux_5bitrates <input_file> <output_dir>"
+  echo "   video_scaled_demux_5bitrates <input_file> <output_dir> <gop_size>"
 }
 
 if [ -z $1 ]; then
@@ -47,15 +47,17 @@ fi
 
 mkdir -p $2
 
-$avconv -threads auto -i $1 -vf "scale=w=512:h=288" -map_chapters -1 -an -codec:v libx264 -profile:v main -level 21 -b:v 360k $2/video_512x288_h264-360Kb.mp4
+x264opts="keyint=$3:min-keyint=$3"
 
-$avconv -threads auto -i $1 -vf "scale=w=704:h=396" -map_chapters -1 -an -codec:v libx264 -profile:v main -level 30 -b:v 620k $2/video_704x396_h264-620Kb.mp4
+$avconv -threads auto -i $1 -vf "scale=w=512:h=288" -map_chapters -1 -an -codec:v libx264 -profile:v main -level 30 -b:v 360k -x264opts $x264opts $2/video_512x288_h264-360Kb.mp4
 
-$avconv -threads auto -i $1 -vf "scale=w=896:h=504" -map_chapters -1 -an -codec:v libx264 -profile:v high -level 31 -b:v 1340k $2/video_896x504_h264-1340Kb.mp4
+$avconv -threads auto -i $1 -vf "scale=w=704:h=396" -map_chapters -1 -an -codec:v libx264 -profile:v main -level 30 -b:v 620k -x264opts $x264opts $2/video_704x396_h264-620Kb.mp4
 
-$avconv -threads auto -i $1 -vf "scale=w=1280:h=720" -map_chapters -1 -an -codec:v libx264 -profile:v high -level 32 -b:v 2500k $2/video_1280x720_h264-2500Kb.mp4
+$avconv -threads auto -i $1 -vf "scale=w=896:h=504" -map_chapters -1 -an -codec:v libx264 -profile:v high -level 31 -b:v 1340k -x264opts $x264opts $2/video_896x504_h264-1340Kb.mp4
 
-$avconv -threads auto -i $1 -vf "scale=w=1920:h=1080" -map_chapters -1 -sn -an -codec:v libx264 -profile:v high -level 40 -b:v 4500k  $2/video_1920x1080_h264-4500Kb.mp4
+$avconv -threads auto -i $1 -vf "scale=w=1280:h=720" -map_chapters -1 -an -codec:v libx264 -profile:v high -level 32 -b:v 2500k -x264opts $x264opts $2/video_1280x720_h264-2500Kb.mp4
+
+$avconv -threads auto -i $1 -vf "scale=w=1920:h=1080" -map_chapters -1 -sn -an -codec:v libx264 -profile:v high -level 40 -b:v 4500k -x264opts $x264opts $2/video_1920x1080_h264-4500Kb.mp4
 
 $avconv -threads auto -i $1 -map_chapters -1 -vn -codec:a libfdk_aac -profile:a aac_low -b:a 128k $2/audio_aac-lc_128k.mp4
 
