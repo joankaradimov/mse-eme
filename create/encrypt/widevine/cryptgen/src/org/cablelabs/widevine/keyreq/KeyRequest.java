@@ -56,7 +56,7 @@ public class KeyRequest {
     private static final String[] DRM_TYPES = { "WIDEVINE" };
     
     private static final String TEST_PROVIDER   = "widevine_test";
-    private static final String TEST_SERVER_URL = "https://license.uat.widevine.com";
+    private static final String TEST_SERVER_URL = "https://license.uat.widevine.com/cenc/getcontentkey/widevine_test";
     
     private static final String SIGN_PROPS_URL      = "url";
     private static final String SIGN_PROPS_KEY      = "key";

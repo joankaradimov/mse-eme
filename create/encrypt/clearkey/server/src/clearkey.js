@@ -80,25 +80,23 @@ http.createServer(function(req, res) {
         keyIDs.push(query.keyid);
     }
 
-    var jwk_array = [];
+    var keyarray = [];
     for (var i = 0; i < keyIDs.length; i++) {
         var keyID = keyIDs[i];
         if (!keys.hasOwnProperty(keyID)) {
             console.warn("KeyID %s not registered in our lookup table!", keyID);
             continue;
         }
-        var jwk = {
-            kty: "oct",
-            alg: "A128GCM",
-            kid: new Buffer(keyIDs[i], 'hex').toString('base64').replace(/=/g, ""),
-            k: keys[keyIDs[i]].toString('base64').replace(/=/g, "")
+        var keypair = {
+            kid: new Buffer(keyIDs[i], 'hex').toString('base64'),
+            k: keys[keyIDs[i]].toString('base64')
         };
-        jwk_array.push(jwk);
+        keyarray.push(keypair);
     }
     var response = {
-        keys: jwk_array
+        keys: keyarray
     };
-    console.log("Returning JWK: %j", response);
+    console.log("Returning key array: %j", response);
     var json_str_response = JSON.stringify(response);
     addCORSHeaders(res, json_str_response.length);
     res.write(json_str_response);

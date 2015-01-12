@@ -37,7 +37,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.commons.codec.binary.Hex;
-import org.cablelabs.clearkey.cryptfile.ClearKeyJsonPSSH;
+import org.cablelabs.clearkey.cryptfile.ClearKeyInternalPSSH;
 import org.cablelabs.clearkey.cryptfile.ClearKeyPSSH;
 import org.cablelabs.clearkey.cryptfile.ClearKeyRemotePSSH;
 import org.cablelabs.cryptfile.CryptKey;
@@ -247,8 +247,8 @@ public class CryptfileGen {
             System.out.println("");
             pssh = new ClearKeyRemotePSSH(url, keyIDs);
         }
-        else { // JSON
-            pssh = new ClearKeyJsonPSSH(keypairs);
+        else { // Internal
+            pssh = new ClearKeyInternalPSSH(keypairs);
         }
         
         List<DRMInfoPSSH> psshList = new ArrayList<DRMInfoPSSH>();

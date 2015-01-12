@@ -34,10 +34,10 @@ import org.cablelabs.cryptfile.DRMInfoPSSH;
 public abstract class ClearKeyPSSH extends DRMInfoPSSH {
     
     private static final byte[] CLEARKEY_SYSTEM_ID = {
+        (byte)0x10, (byte)0x00, (byte)0x00, (byte)0x00,
         (byte)0x00, (byte)0x00, (byte)0x00, (byte)0x00,
         (byte)0x00, (byte)0x00, (byte)0x00, (byte)0x00,
-        (byte)0x00, (byte)0x00, (byte)0x00, (byte)0x00,
-        (byte)0x00, (byte)0x00, (byte)0x00, (byte)0x01
+        (byte)0x00, (byte)0x00, (byte)0x00, (byte)0x00
     };
     
     protected ClearKeyPSSH() {

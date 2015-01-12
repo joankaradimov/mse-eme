@@ -68,11 +68,15 @@ var crypto = require('crypto');
 var url = require('url');
 var Q = require('q');
 
+// If unsigned, listen on port 8020
+var port = 8020
+
 // Look for server definition module on the command line
 var args = process.argv.slice(2);
 if (args.length > 0) {
     wvServer = require(args[0]);
     signed = true;
+    port = 8025;
 }
 
 // Validate server URL
@@ -90,6 +94,7 @@ urlParsed.method = 'POST';
 
 console.log("Starting proxy server.  DRM Server Info:");
 console.log(wvServer);
+console.log("Listening on port " + port);
 
 var addCORSHeaders = function(code, res, length) {
     res.writeHeader(code, {
@@ -220,5 +225,5 @@ http.createServer(function(req, res) {
         );
     });
 
-}).listen(8025);
+}).listen(port);
 

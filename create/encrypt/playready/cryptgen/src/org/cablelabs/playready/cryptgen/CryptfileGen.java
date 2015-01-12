@@ -37,7 +37,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.commons.codec.binary.Hex;
-import org.cablelabs.clearkey.cryptfile.ClearKeyJsonPSSH;
+import org.cablelabs.clearkey.cryptfile.ClearKeyInternalPSSH;
 import org.cablelabs.clearkey.cryptfile.ClearKeyRemotePSSH;
 import org.cablelabs.cryptfile.CryptKey;
 import org.cablelabs.cryptfile.CryptTrack;
@@ -91,8 +91,8 @@ public class CryptfileGen {
         System.out.println("\t\tAdd CableLabs 'Remote' ClearKey PSSH to the cryptfile.  <url> is the ClearKey server");
         System.out.println("\t\tURL.");
         System.out.println("");
-        System.out.println("\t-ck_json");
-        System.out.println("\t\tAdd CableLabs 'JSON' ClearKey PSSH to the cryptfile.");
+        System.out.println("\t-ck_internal");
+        System.out.println("\t\tAdd CableLabs 'Internal' ClearKey PSSH to the cryptfile.");
     }
     
     private static class Track {
@@ -184,7 +184,7 @@ public class CryptfileGen {
                     url = subopts[0];
                     i++;
                 }
-                else if ((subopts = checkOption("-ck_json", args, i, 0)) != null) {
+                else if ((subopts = checkOption("-ck_internal", args, i, 0)) != null) {
                     clearkey = true;
                 }
                 else if ((subopts = checkOption("-ck_remote", args, i, 1)) != null) {
@@ -287,7 +287,7 @@ public class CryptfileGen {
                         keys.add(key.getKeyPair());
                     }
                 }
-                psshList.add(new ClearKeyJsonPSSH(keys));
+                psshList.add(new ClearKeyInternalPSSH(keys));
             }
         }
         
