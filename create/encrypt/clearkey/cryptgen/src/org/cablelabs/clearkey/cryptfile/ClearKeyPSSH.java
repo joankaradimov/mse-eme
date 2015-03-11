@@ -26,22 +26,37 @@
 
 package org.cablelabs.clearkey.cryptfile;
 
+import org.cablelabs.cryptfile.Bitstream;
 import org.cablelabs.cryptfile.DRMInfoPSSH;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.Node;
 
 /**
  * Abstract base class for CableLabs ClearKey PSSH variants
  */
-public abstract class ClearKeyPSSH extends DRMInfoPSSH {
+public class ClearKeyPSSH extends DRMInfoPSSH {
     
     private static final byte[] CLEARKEY_SYSTEM_ID = {
-        (byte)0x10, (byte)0x00, (byte)0x00, (byte)0x00,
-        (byte)0x00, (byte)0x00, (byte)0x00, (byte)0x00,
-        (byte)0x00, (byte)0x00, (byte)0x00, (byte)0x00,
-        (byte)0x00, (byte)0x00, (byte)0x00, (byte)0x00
+        (byte)0x10, (byte)0x77, (byte)0xef, (byte)0xec,
+        (byte)0xc0, (byte)0xb2, (byte)0x4d, (byte)0x02,
+        (byte)0xac, (byte)0xe3, (byte)0x3c, (byte)0x1e,
+        (byte)0x52, (byte)0xe2, (byte)0xfb, (byte)0x4b
     };
     
-    protected ClearKeyPSSH() {
-        super(CLEARKEY_SYSTEM_ID);
+    // Must be PSSH version 1 
+    public ClearKeyPSSH(byte[][] keyIDs) {
+        super(CLEARKEY_SYSTEM_ID, 1, keyIDs);
     }
-    
+
+    @Override
+    public Node generateXML(Document d) {
+        Element e = generateDRMInfo(d);
+                
+        // 0 data size  
+        Bitstream b = new Bitstream();
+        b.setupInteger(0, 32);
+        e.appendChild(b.generateXML(d));
+        return e;
+    }
 }

@@ -39,10 +39,14 @@ public abstract class DRMInfoPSSH implements MP4BoxXML {
     private static final String ATTR_TYPE = "type";
     private static final String ATTR_VERSION = "version";
     
+    private int psshVersion = 0;
+    private byte[][] keyIDs;
+    
     protected byte[] systemID; 
     
+    
     /**
-     * Construct a new DRMInfo element
+     * Construct a new DRMInfo element (PSSH version 0)
      * 
      * @param systemID the unique identifier registered to a particular DRM system
      */
@@ -55,6 +59,24 @@ public abstract class DRMInfoPSSH implements MP4BoxXML {
     }
     
     /**
+     * Construct a new DRMInfo element (PSSH version 1+)
+     * 
+     * @param systemID the unique identifier registered to a particular DRM system
+     * @param psshVersion pssh version
+     * @param keyIDs an array of 16-byte key ID values
+     */
+    protected DRMInfoPSSH(byte[] systemID, int psshVersion, byte[][] keyIDs) {
+        this(systemID);
+        
+        if (psshVersion < 1) 
+            throw new IllegalArgumentException("Invalid PSSH version (" + psshVersion + ")!  Must be 1 or greater.");
+        
+        this.systemID = systemID;
+        this.psshVersion = psshVersion;
+        this.keyIDs = keyIDs;
+    }
+    
+    /**
      * Generates the base DRMInfo element with a system ID child element
      * 
      * @param d the DOM Document
@@ -63,12 +85,22 @@ public abstract class DRMInfoPSSH implements MP4BoxXML {
     protected Element generateDRMInfo(Document d) {
        Element e = d.createElement(ELEMENT);
        e.setAttribute(ATTR_TYPE, "pssh");
-       e.setAttribute(ATTR_VERSION, "0");
+       e.setAttribute(ATTR_VERSION, "" + psshVersion);
        
        Bitstream b = new Bitstream();
        b.setupID128(systemID);
-       
        e.appendChild(b.generateXML(d));
+       
+       if (psshVersion >= 1) {
+           b = new Bitstream();
+           b.setupInteger(keyIDs.length, 32);
+           e.appendChild(b.generateXML(d));
+           for (int i = 0; i < keyIDs.length; i++) {
+               b = new Bitstream();
+               b.setupID128(keyIDs[i]);
+               e.appendChild(b.generateXML(d));
+           }
+       }
        
        return e;
     }

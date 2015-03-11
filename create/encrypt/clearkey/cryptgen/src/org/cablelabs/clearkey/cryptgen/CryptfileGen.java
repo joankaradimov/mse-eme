@@ -31,15 +31,11 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
-import java.net.MalformedURLException;
-import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.commons.codec.binary.Hex;
-import org.cablelabs.clearkey.cryptfile.ClearKeyInternalPSSH;
 import org.cablelabs.clearkey.cryptfile.ClearKeyPSSH;
-import org.cablelabs.clearkey.cryptfile.ClearKeyRemotePSSH;
 import org.cablelabs.cryptfile.CryptKey;
 import org.cablelabs.cryptfile.CryptTrack;
 import org.cablelabs.cryptfile.CryptfileBuilder;
@@ -47,23 +43,23 @@ import org.cablelabs.cryptfile.DRMInfoPSSH;
 import org.cablelabs.cryptfile.KeyPair;
 
 /**
- * This utility will build a MP4Box CableLabs ClearKey cryptfile for a given piece of content.
+ * This utility will build a MP4Box ClearKey cryptfile for a given piece of content.
  */
 public class CryptfileGen {
 
     private static void usage() {
-        System.out.println("CableLabs ClearKey MP4Box cryptfile generation tool.");
+        System.out.println("ClearKey MP4Box cryptfile generation tool.");
         System.out.println("");
-        System.out.println("usage:  CryptfileGen [OPTIONS] <track_id>:{@<key_file>|<key_id>=<key>[,<key_id>:<key>...]} [<track_id>:{@<key_file>|<key_id>:<key>[,<key_id>:<key>...]}]...");
+        System.out.println("usage:  CryptfileGen [OPTIONS] <track_id>:{@<key_file>|<key_id>=<key>[,<key_id>=<key>...]} [<track_id>:{@<key_file>|<key_id>=<key>[,<key_id>=<key>...]}]...");
         System.out.println("");
         System.out.println("\t<track_id> is the track ID from the MP4 file to be encrypted.");
         System.out.println("\tAfter the '<track_id>:', you can specify either a file containing key/keyID pairs");
-        System.out.println("\tOR a comma-separated list of keyID/key pairs separated by '='.  Key IDs are always");
+        System.out.println("\tOR a comma-separated list of keyID/key pairs separated by ':'.  Key IDs are always");
         System.out.println("\trepresented in GUID form (xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx).  Key values are");
         System.out.println("\talways in hexadecimal.  Multiple key IDs indicate the use of rolling keys.");
         System.out.println("");
-        System.out.println("\t\t<keyid_file> is a file that contains a list of key pairs, one pair per line in");
-        System.out.println("\t\tthe form <key_id>:<key>");
+        System.out.println("\t\t<keyid_file> is a file that contains a list of key IDs, one pair per line in");
+        System.out.println("\t\tGUID form.");
         System.out.println("");
         System.out.println("\t\t<keyid> is a key ID in GUID form.");
         System.out.println("");
@@ -77,11 +73,6 @@ public class CryptfileGen {
         System.out.println("\t-out <filename>");
         System.out.println("\t\tIf present, the cryptfile will be written to the given file. Otherwise output will be");
         System.out.println("\t\twritten to stdout.");
-        System.out.println("");
-        System.out.println("\t-remote <license_url>");
-        System.out.println("\t\tIf present, the ClearKey PSSH for the content will indicate that the player should");
-        System.out.println("\t\tcontact the ClearKey server at the given URL for keys.  The default behavior is to");
-        System.out.println("\t\tgenerate ClearKey PSSH with JSON Web Keys embedded directly");
         System.out.println("");
         System.out.println("\t-roll <sample_count>");
         System.out.println("\t\tUsed for rolling keys only.  <sample_count> is the number of consecutive samples to be");
@@ -136,7 +127,6 @@ public class CryptfileGen {
         int rollingKeySamples = -1;
         
         String outfile = null;
-        URL url = null;
         List<Track> tracks = new ArrayList<Track>();
         
         // Parse arguments
@@ -155,15 +145,6 @@ public class CryptfileGen {
                 }
                 else if ((subopts = checkOption("-roll", args, i, 1)) != null) {
                     rollingKeySamples = Integer.parseInt(subopts[0]);
-                    i++;
-                }
-                else if ((subopts = checkOption("-remote", args, i, 1)) != null) {
-                    try {
-                        url = new URL(subopts[0]);
-                    }
-                    catch (MalformedURLException e) {
-                        errorExit("Illegal URL: " + e.getMessage());
-                    }
                     i++;
                 }
                 else {
@@ -235,21 +216,16 @@ public class CryptfileGen {
         
         ClearKeyPSSH pssh = null;
         
-        // Remote
-        if (url != null) {
-            List<String> keyIDs = new ArrayList<String>();
-            System.out.println("Ensure the following keys are installed on the ClearKey server:");
-            for (KeyPair keypair : keypairs) {
-                System.out.println("\t" + Hex.encodeHexString(keypair.getID()) +
-                                   " : " + Hex.encodeHexString(keypair.getKey()));
-                keyIDs.add(Hex.encodeHexString(keypair.getID()));
-            }
-            System.out.println("");
-            pssh = new ClearKeyRemotePSSH(url, keyIDs);
+        byte[][] keyIDs = new byte[keypairs.size()][];
+        int i = 0;
+        System.out.println("Ensure the following keys are available to the client:");
+        for (KeyPair keypair : keypairs) {
+            System.out.println("\t" + Hex.encodeHexString(keypair.getID()) +
+                               " : " + Hex.encodeHexString(keypair.getKey()));
+            keyIDs[i++] = keypair.getID();
         }
-        else { // Internal
-            pssh = new ClearKeyInternalPSSH(keypairs);
-        }
+        System.out.println("");
+        pssh = new ClearKeyPSSH(keyIDs);
         
         List<DRMInfoPSSH> psshList = new ArrayList<DRMInfoPSSH>();
         psshList.add(pssh);

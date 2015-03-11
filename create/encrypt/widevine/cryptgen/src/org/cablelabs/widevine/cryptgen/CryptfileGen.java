@@ -28,15 +28,12 @@ package org.cablelabs.widevine.cryptgen;
 
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
-import java.net.MalformedURLException;
-import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.codec.binary.Hex;
-import org.cablelabs.clearkey.cryptfile.ClearKeyInternalPSSH;
-import org.cablelabs.clearkey.cryptfile.ClearKeyRemotePSSH;
+import org.cablelabs.clearkey.cryptfile.ClearKeyPSSH;
 import org.cablelabs.cryptfile.CryptKey;
 import org.cablelabs.cryptfile.CryptTrack;
 import org.cablelabs.cryptfile.CryptfileBuilder;
@@ -99,12 +96,8 @@ public class CryptfileGen {
         System.out.println("\t\tis the integer number of keys requested.  <sample_count> is the number of consecutive");
         System.out.println("\t\tsamples to be encrypted with each key before moving to the next.");
         System.out.println("");
-        System.out.println("\t-ck_remote <url>");
-        System.out.println("\t\tAdd CableLabs 'Remote' ClearKey PSSH to the cryptfile.  <url> is the ClearKey server");
-        System.out.println("\t\tURL.");
-        System.out.println("");
-        System.out.println("\t-ck_internal");
-        System.out.println("\t\tAdd CableLabs 'Internal' ClearKey PSSH to the cryptfile.");
+        System.out.println("\t-ck");
+        System.out.println("\t\tAdd ClearKey PSSH to the cryptfile.");
     }
     
     private static void invalidOption(String option) {
@@ -160,7 +153,6 @@ public class CryptfileGen {
         
         // Clearkey
         boolean clearkey = false;
-        URL clearkey_url = null;
         
         // Parse arguments
         String content_id_str = null;
@@ -182,18 +174,8 @@ public class CryptfileGen {
                     signingFile = subopts[0];
                     i++;
                 }
-                else if ((subopts = checkOption("-ck_internal", args, i, 0)) != null) {
+                else if ((subopts = checkOption("-ck", args, i, 0)) != null) {
                     clearkey = true;
-                }
-                else if ((subopts = checkOption("-ck_remote", args, i, 1)) != null) {
-                    try {
-                        clearkey_url = new URL(subopts[0]);
-                        clearkey = true;
-                    }
-                    catch (MalformedURLException e) {
-                        errorExit("Illegal clearkey URL: " + e.getMessage());
-                    }
-                    i++;
                 }
                 else if ((subopts = checkOption("-roll", args, i, 3)) != null) {
                     rollingKeyStart = Integer.parseInt(subopts[0]);
@@ -300,30 +282,22 @@ public class CryptfileGen {
         
         // Add clearkey PSSH if requested
         if (clearkey) {
-            if (clearkey_url != null) {
-                // Build list of all key IDs
-                List<String> keyIDs = new ArrayList<String>();
-                System.out.println("Ensure the following keys are installed on the ClearKey server:");
-                for (CryptTrack t : cryptTracks) {
-                    for (CryptKey key : t.getKeys()) {
-                        System.out.println("\t" + Hex.encodeHexString(key.getKeyPair().getID()) +
-                                           " : " + Hex.encodeHexString(key.getKeyPair().getKey()));
-                        keyIDs.add(Hex.encodeHexString(key.getKeyPair().getID()));
-                    }
-                }
-                System.out.println("");
-                psshList.add(new ClearKeyRemotePSSH(clearkey_url, keyIDs));
+            int keyCount = 0;
+            for (CryptTrack t : cryptTracks) {
+                keyCount += t.getKeys().size();
             }
-            else {
-                // Build list of all key pairs
-                List<KeyPair> keys = new ArrayList<KeyPair>();
-                for (CryptTrack t : cryptTracks) {
-                    for (CryptKey key : t.getKeys()) {
-                        keys.add(key.getKeyPair());
-                    }
+            byte[][] keyIDs = new byte[keyCount][];
+            int i = 0;
+            System.out.println("Ensure the following keys are available to the client:");
+            for (CryptTrack t : cryptTracks) {
+                for (CryptKey key : t.getKeys()) {
+                    System.out.println("\t" + Hex.encodeHexString(key.getKeyPair().getID()) +
+                                       " : " + Hex.encodeHexString(key.getKeyPair().getKey()));
+                    keyIDs[i++] = key.getKeyPair().getID();
                 }
-                psshList.add(new ClearKeyInternalPSSH(keys));
             }
+            System.out.println("");
+            psshList.add(new ClearKeyPSSH(keyIDs));
         }
         
         CryptfileBuilder cfBuilder = new CryptfileBuilder(CryptfileBuilder.ProtectionScheme.AES_CTR,
