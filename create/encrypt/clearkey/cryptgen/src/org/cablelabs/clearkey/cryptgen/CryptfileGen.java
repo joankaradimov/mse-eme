@@ -34,6 +34,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.codec.binary.Hex;
 import org.cablelabs.clearkey.cryptfile.ClearKeyPSSH;
 import org.cablelabs.cryptfile.CryptKey;
@@ -231,7 +232,9 @@ public class CryptfileGen {
         System.out.println("Ensure the following keys are available to the client:");
         for (KeyPair keypair : keypairs) {
             System.out.println("\t" + Hex.encodeHexString(keypair.getID()) +
-                               " : " + Hex.encodeHexString(keypair.getKey()));
+                               " : " + Hex.encodeHexString(keypair.getKey()) +
+                               " (" + Base64.encodeBase64String(keypair.getID()) +
+                               " : " + Base64.encodeBase64String(keypair.getKey()) + ")");
             keyIDs[i++] = keypair.getID();
         }
         System.out.println("");

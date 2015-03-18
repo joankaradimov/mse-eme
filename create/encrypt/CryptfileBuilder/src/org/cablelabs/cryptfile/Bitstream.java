@@ -233,22 +233,22 @@ public class Bitstream implements MP4BoxXML {
      * 
      * @param data the data
      */
-    public void setupDataB64(String b64Data) {
+    public void setupDataB64(byte[] data) {
         type = BSType.DATA64;
-        data = Base64.decodeBase64(b64Data);
+        this.data = data;
         bits = 0;
     }
     
     /**
      * Arbitrary data preceded by an integer value indicating the length of the data
      * 
-     * @param data the data in hexadecimal string format
+     * @param data the data 
      * @param the width of the length field in bits
      */
-    public void setupDataB64(String b64Data, int bits) {
-        if (Base64.decodeBase64(b64Data).length > (Math.pow(2, bits) - 1))
+    public void setupDataB64(byte[] data, int bits) {
+        if (data.length > (Math.pow(2, bits) - 1))
             throw new IllegalArgumentException("Data length is too long for given bit width");
-        setupDataB64(b64Data);
+        setupDataB64(data);
         this.bits = bits;
     }
     

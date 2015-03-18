@@ -111,14 +111,20 @@ public abstract class DRMInfoPSSH implements MP4BoxXML {
         ByteArrayOutputStream psshBytes = new ByteArrayOutputStream();
         DataOutputStream pssh = new DataOutputStream(psshBytes);
         
-        // Write size field
-        pssh.writeInt(pssh.size());
+        // Size field placeholder
+        pssh.writeInt(0);
         
-        // Write box-type
+        // Box-type
         pssh.write('p'); pssh.write('s'); pssh.write('s'); pssh.write('h');
         
-        // Write version
+        // Version (8 bits)
         pssh.write(psshVersion & 0xFF);
+        
+        // Flags (24 bits)
+        pssh.writeByte(0); pssh.writeByte(0); pssh.writeByte(0);
+        
+        // System ID
+        pssh.write(systemID);
         
         // KID list?
         if (psshVersion > 0) {
@@ -131,7 +137,15 @@ public abstract class DRMInfoPSSH implements MP4BoxXML {
         // Write data
         generatePSSHData(pssh);
         
-        return Base64.encodeBase64String(psshBytes.toByteArray());
+        // Write length field at the start of the data
+        byte[] psshByteArray = psshBytes.toByteArray();
+        int size = psshByteArray.length;
+        psshByteArray[0] = (byte)((size >> 24) & 0xFF);
+        psshByteArray[1] = (byte)((size >> 16) & 0xFF);
+        psshByteArray[2] = (byte)((size >>  8) & 0xFF);
+        psshByteArray[3] = (byte)((size      ) & 0xFF);
+        
+        return Base64.encodeBase64String(psshByteArray);
     }
     
     /**

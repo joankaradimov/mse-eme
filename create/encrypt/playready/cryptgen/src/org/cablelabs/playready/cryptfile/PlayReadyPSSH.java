@@ -46,8 +46,7 @@ import org.w3c.dom.Node;
  */
 public class PlayReadyPSSH extends DRMInfoPSSH {
     
-    private static final String MSPRO_NAMESPACE = "mspr";
-    private static final String MSPRO_ELEMENT = "pro";
+    private static final String MSPRO_ELEMENT = "mspr:pro";
     
     private static final byte[] PLAYREADY_SYSTEM_ID = {
         (byte)0x9a, (byte)0x04, (byte)0xf0, (byte)0x79,
@@ -84,7 +83,7 @@ public class PlayReadyPSSH extends DRMInfoPSSH {
         Element e = super.generateContentProtection(d);
         
         
-        Element pro = d.createElementNS(MSPRO_NAMESPACE, MSPRO_ELEMENT);
+        Element pro = d.createElement(MSPRO_ELEMENT);
         
         // Generate base64-encoded PRO
         ByteBuffer ba = ByteBuffer.allocate(4);
@@ -113,10 +112,10 @@ public class PlayReadyPSSH extends DRMInfoPSSH {
             dos.write(ba.array(), 0, 2);
             
             // Data
-            dos.write(Base64.encodeBase64(wrmData));
+            dos.write(wrmData);
         }
         
-        pro.setTextContent(new String(baos.toByteArray()));
+        pro.setTextContent(Base64.encodeBase64String(baos.toByteArray()));
         
         e.appendChild(pro);
         
@@ -154,7 +153,7 @@ public class PlayReadyPSSH extends DRMInfoPSSH {
             e.appendChild(b.generateXML(d));
             
             // Data
-            b.setupDataB64(Base64.encodeBase64String(wrmData));
+            b.setupDataB64(wrmData);
             e.appendChild(b.generateXML(d));
         }
         

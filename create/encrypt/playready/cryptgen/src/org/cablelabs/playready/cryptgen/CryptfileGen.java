@@ -34,6 +34,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.codec.binary.Hex;
 import org.cablelabs.clearkey.cryptfile.ClearKeyPSSH;
 import org.cablelabs.cryptfile.CryptKey;
@@ -266,7 +267,9 @@ public class CryptfileGen {
             for (CryptTrack t : cryptTracks) {
                 for (CryptKey key : t.getKeys()) {
                     System.out.println("\t" + Hex.encodeHexString(key.getKeyPair().getID()) +
-                                       " : " + Hex.encodeHexString(key.getKeyPair().getKey()));
+                                       " : " + Hex.encodeHexString(key.getKeyPair().getKey()) +
+                                       " (" + Base64.encodeBase64String(key.getKeyPair().getID()) +
+                                       " : " + Base64.encodeBase64String(key.getKeyPair().getKey()) + ")");
                     keyIDs[i++] = key.getKeyPair().getID();
                 }
             }
