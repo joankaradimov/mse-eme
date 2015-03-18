@@ -45,7 +45,12 @@ public class KeyPair {
     protected static final int AES_128_KEYSIZE = 16;
     protected static final int GUID_SIZE       = 16;
     
-    // Converts a string GUID into a byte array
+    /**
+     * Convert a string GUID into a byte array
+     * 
+     * @param guid the string GUID in the form 
+     * @return the 16-byte equivalant of the given GUID
+     */
     public static byte[] parseGUID(String guid) {
         String[] parts = guid.split("-");
         if (parts.length != 5 || parts[0].length() != 8 || parts[1].length() != 4 ||
@@ -69,6 +74,36 @@ public class KeyPair {
         }
         
         return baos.toByteArray();
+    }
+    
+    /**
+     * Convert a 16-byte value to a GUID of the form XXXXXX-XXXX-XXXX-XXXX-XXXXXXXX
+     * 
+     * @param data the 16-byte value to convert
+     * @return the GUID string
+     */
+    public static String toGUID(byte[] data) {
+        if (data.length != GUID_SIZE)
+            throw new IllegalArgumentException("Invalid data! -- must be 16-bytes to create GUID");
+        
+        String retVal = "";
+        int byteIndex = 0;
+        for (int i = 0; i < 4; i++, byteIndex++)
+            retVal += String.format("%02x", data[byteIndex]);
+        retVal += "-";
+        for (int i = 0; i < 2; i++, byteIndex++)
+            retVal += String.format("%02x", data[byteIndex]);
+        retVal += "-";
+        for (int i = 0; i < 2; i++, byteIndex++)
+            retVal += String.format("%02x", data[byteIndex]);
+        retVal += "-";
+        for (int i = 0; i < 2; i++, byteIndex++)
+            retVal += String.format("%02x", data[byteIndex]);
+        retVal += "-";
+        for (int i = 0; i < 6; i++, byteIndex++)
+            retVal += String.format("%02x", data[byteIndex]);
+        
+        return retVal;
     }
     
     private static byte[] parseHexKey(String hexKey) {

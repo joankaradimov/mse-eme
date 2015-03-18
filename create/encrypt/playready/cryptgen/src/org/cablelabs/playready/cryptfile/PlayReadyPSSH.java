@@ -26,7 +26,11 @@
 
 package org.cablelabs.playready.cryptfile;
 
-import java.util.ArrayList;
+import java.io.ByteArrayOutputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.util.List;
 
 import org.apache.commons.codec.binary.Base64;
@@ -42,6 +46,9 @@ import org.w3c.dom.Node;
  */
 public class PlayReadyPSSH extends DRMInfoPSSH {
     
+    private static final String MSPRO_NAMESPACE = "mspr";
+    private static final String MSPRO_ELEMENT = "pro";
+    
     private static final byte[] PLAYREADY_SYSTEM_ID = {
         (byte)0x9a, (byte)0x04, (byte)0xf0, (byte)0x79,
         (byte)0x98, (byte)0x40, (byte)0x42, (byte)0x86,
@@ -50,27 +57,17 @@ public class PlayReadyPSSH extends DRMInfoPSSH {
     };
     
     private List<WRMHeader> wrmHeaders;
+    private int wrmHeadersSize = 0;
+    private int proSize;
 
     public PlayReadyPSSH(List<WRMHeader> wrmHeaders) {
         super(PLAYREADY_SYSTEM_ID);
         this.wrmHeaders = wrmHeaders;
-    }
-
-    /*
-     * (non-Javadoc)
-     * @see org.cablelabs.cryptfile.MP4BoxXML#generateXML(org.w3c.dom.Document)
-     */
-    @Override
-    public Node generateXML(Document d) {
-        List<byte[]> wrmheader_data = new ArrayList<byte[]>();
         
         // Collect all of our WRMHeader data arrays so that we can calculate the
         // total size
-        int wrmSize = 0;
         for (WRMHeader header : wrmHeaders) {
-            byte[] data = header.getWRMHeaderData();
-            wrmSize += data.length;
-            wrmheader_data.add(data);
+            wrmHeadersSize += header.getWRMHeaderData().length;
         }
         
         // Total size of PlayReady Header Object is:
@@ -79,7 +76,59 @@ public class PlayReadyPSSH extends DRMInfoPSSH {
         //    2          Number of Records field
         //    4*NumRec   Record Type and Record Length field for each record
         //    RecSize    Size of all headers
-        int proSize = 4 + 2 + (4*wrmHeaders.size()) + wrmSize;
+        proSize = 4 + 2 + (4*wrmHeaders.size()) + wrmHeadersSize;
+    }
+
+    @Override
+    public Element generateContentProtection(Document d) throws IOException {
+        Element e = super.generateContentProtection(d);
+        
+        
+        Element pro = d.createElementNS(MSPRO_NAMESPACE, MSPRO_ELEMENT);
+        
+        // Generate base64-encoded PRO
+        ByteBuffer ba = ByteBuffer.allocate(4);
+        ba.order(ByteOrder.LITTLE_ENDIAN);
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        DataOutputStream dos = new DataOutputStream(baos);
+        
+        // PlayReady Header Object Size field
+        ba.putInt(0, proSize);
+        dos.write(ba.array());
+        
+        // Number of Records field
+        ba.putShort(0, (short)wrmHeaders.size());
+        dos.write(ba.array(), 0, 2);
+        
+        for (WRMHeader header : wrmHeaders) {
+            
+            byte[] wrmData = header.getWRMHeaderData();
+            
+            // Record Type (always 1 for WRM Headers)
+            ba.putShort(0, (short)1);
+            dos.write(ba.array(), 0, 2);
+            
+            // Record Length
+            ba.putShort(0, (short)wrmData.length);
+            dos.write(ba.array(), 0, 2);
+            
+            // Data
+            dos.write(Base64.encodeBase64(wrmData));
+        }
+        
+        pro.setTextContent(new String(baos.toByteArray()));
+        
+        e.appendChild(pro);
+        
+        return e;
+    }
+
+    /*
+     * (non-Javadoc)
+     * @see org.cablelabs.cryptfile.MP4BoxXML#generateXML(org.w3c.dom.Document)
+     */
+    @Override
+    public Node generateXML(Document d) {
         
         Element e = generateDRMInfo(d);
         Bitstream b = new Bitstream();
@@ -92,7 +141,9 @@ public class PlayReadyPSSH extends DRMInfoPSSH {
         b.setupIntegerLE(wrmHeaders.size(), 16);
         e.appendChild(b.generateXML(d));
         
-        for (byte[] wrmData : wrmheader_data) {
+        for (WRMHeader header : wrmHeaders) {
+            
+            byte[] wrmData = header.getWRMHeaderData();
             
             // Record Type (always 1 for WRM Headers)
             b.setupIntegerLE(1, 16);

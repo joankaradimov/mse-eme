@@ -26,6 +26,9 @@
 
 package org.cablelabs.widevine.cryptfile;
 
+import java.io.DataOutputStream;
+import java.io.IOException;
+
 import org.apache.commons.codec.binary.Base64;
 import org.cablelabs.cryptfile.Bitstream;
 import org.cablelabs.cryptfile.DRMInfoPSSH;
@@ -38,6 +41,7 @@ import org.w3c.dom.Node;
  * Generates Widevine-specific PSSH for MP4Box cryptfiles
  */
 public class WidevinePSSH extends DRMInfoPSSH {
+    
     
     private static final byte[] WIDEVINE_SYSTEM_ID = {
         (byte)0xed, (byte)0xef, (byte)0x8b, (byte)0xa9,
@@ -56,6 +60,28 @@ public class WidevinePSSH extends DRMInfoPSSH {
     public WidevinePSSH(WidevinePSSHProtoBuf.WidevineCencHeader psshProto) {
         super(WIDEVINE_SYSTEM_ID);
         this.psshProto = psshProto;
+    }
+
+    @Override
+    public Element generateContentProtection(Document d) throws IOException {
+        Element e = super.generateContentProtection(d);
+        
+        Element pssh = d.createElement(CENC_PSSH_ELEMENT);
+        pssh.setTextContent(getPSSHBase64());
+        e.appendChild(pssh);
+        
+        return e;
+    }
+
+    /*
+     * (non-Javadoc)
+     * @see org.cablelabs.cryptfile.DRMInfoPSSH#generatePSSH(java.io.DataOutputStream)
+     */
+    @Override
+    protected void generatePSSHData(DataOutputStream dos) throws IOException {
+        byte[] protoBytes = psshProto.toByteArray();
+        dos.writeInt(protoBytes.length);
+        dos.write(protoBytes);
     }
 
     /*

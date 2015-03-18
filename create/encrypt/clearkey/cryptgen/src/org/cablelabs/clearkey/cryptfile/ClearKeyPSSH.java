@@ -26,6 +26,9 @@
 
 package org.cablelabs.clearkey.cryptfile;
 
+import java.io.DataOutputStream;
+import java.io.IOException;
+
 import org.cablelabs.cryptfile.Bitstream;
 import org.cablelabs.cryptfile.DRMInfoPSSH;
 import org.w3c.dom.Document;
@@ -47,6 +50,22 @@ public class ClearKeyPSSH extends DRMInfoPSSH {
     // Must be PSSH version 1 
     public ClearKeyPSSH(byte[][] keyIDs) {
         super(CLEARKEY_SYSTEM_ID, 1, keyIDs);
+    }
+
+    @Override
+    public Element generateContentProtection(Document d) throws IOException {
+        Element e = super.generateContentProtection(d);
+        
+        Element pssh = d.createElement(CENC_PSSH_ELEMENT);
+        pssh.setTextContent(getPSSHBase64());
+        e.appendChild(pssh);
+        
+        return e;
+    }
+
+    @Override
+    protected void generatePSSHData(DataOutputStream dos) throws IOException {
+        dos.writeInt(0);
     }
 
     @Override

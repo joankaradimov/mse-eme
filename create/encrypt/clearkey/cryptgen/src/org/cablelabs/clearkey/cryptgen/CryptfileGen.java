@@ -41,6 +41,7 @@ import org.cablelabs.cryptfile.CryptTrack;
 import org.cablelabs.cryptfile.CryptfileBuilder;
 import org.cablelabs.cryptfile.DRMInfoPSSH;
 import org.cablelabs.cryptfile.KeyPair;
+import org.w3c.dom.Document;
 
 /**
  * This utility will build a MP4Box ClearKey cryptfile for a given piece of content.
@@ -77,6 +78,9 @@ public class CryptfileGen {
         System.out.println("\t-roll <sample_count>");
         System.out.println("\t\tUsed for rolling keys only.  <sample_count> is the number of consecutive samples to be");
         System.out.println("\t\tencrypted with each key before moving to the next.");
+        System.out.println("");
+        System.out.println("\t-cp");
+        System.out.println("\t\tPrint a DASH <ContentProtection> element that can be pasted into the MPD");
     }
     
     private static class Track {
@@ -126,6 +130,9 @@ public class CryptfileGen {
         // Rolling keys
         int rollingKeySamples = -1;
         
+        // Print content protection element?
+        boolean printCP = false;
+        
         String outfile = null;
         List<Track> tracks = new ArrayList<Track>();
         
@@ -146,6 +153,9 @@ public class CryptfileGen {
                 else if ((subopts = checkOption("-roll", args, i, 1)) != null) {
                     rollingKeySamples = Integer.parseInt(subopts[0]);
                     i++;
+                }
+                else if ((subopts = checkOption("-cp", args, i, 0)) != null) {
+                    printCP = true;
                 }
                 else {
                     errorExit("Illegal argument: " + args[i]);
@@ -214,7 +224,7 @@ public class CryptfileGen {
             cryptTracks.add(new CryptTrack(t.id, 8, null, cryptKeys, rollingKeySamples));
         }
         
-        ClearKeyPSSH pssh = null;
+        ClearKeyPSSH ckPSSH = null;
         
         byte[][] keyIDs = new byte[keypairs.size()][];
         int i = 0;
@@ -225,25 +235,42 @@ public class CryptfileGen {
             keyIDs[i++] = keypair.getID();
         }
         System.out.println("");
-        pssh = new ClearKeyPSSH(keyIDs);
+        ckPSSH = new ClearKeyPSSH(keyIDs);
         
         List<DRMInfoPSSH> psshList = new ArrayList<DRMInfoPSSH>();
-        psshList.add(pssh);
+        psshList.add(ckPSSH);
         
-        // Create the cryptfile builder
+        // Print ContentProtection element
+        if (printCP) {
+            System.out.println("############# Content Protection Element #############");
+            for (DRMInfoPSSH pssh : psshList) {
+                Document d = CryptfileBuilder.newDocument();
+                try {
+                    d.appendChild(pssh.generateContentProtection(d));
+                }
+                catch (IOException e) {
+                    System.out.println("Could not generate ContentProtection element!");
+                    continue;
+                }
+                CryptfileBuilder.writeXML(d, System.out);
+            }
+            System.out.println("######################################################");
+        }
+        
         CryptfileBuilder cfBuilder = new CryptfileBuilder(CryptfileBuilder.ProtectionScheme.AES_CTR,
                                                           cryptTracks, psshList);
         
         // Write the output
-        cfBuilder.writeCryptfile(System.out);
-        try {
-            if (outfile != null) {
+        Document d = cfBuilder.buildCryptfile();
+        CryptfileBuilder.writeXML(d, System.out);
+        if (outfile != null) {
+            try {
                 System.out.println("Writing cryptfile to: " + outfile);
-                cfBuilder.writeCryptfile(new FileOutputStream(outfile));
+                CryptfileBuilder.writeXML(d, new FileOutputStream(outfile));
             }
-        }
-        catch (FileNotFoundException e) {
-            errorExit("Could not open output file (" + outfile + ") for writing");
+            catch (FileNotFoundException e) {
+                errorExit("Could not open output file (" + outfile + ") for writing");
+            }
         }
     }
 

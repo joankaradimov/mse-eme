@@ -26,6 +26,11 @@
 
 package org.cablelabs.cryptfile;
 
+import java.io.ByteArrayOutputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
+
+import org.apache.commons.codec.binary.Base64;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 
@@ -35,7 +40,12 @@ import org.w3c.dom.Element;
  */
 public abstract class DRMInfoPSSH implements MP4BoxXML {
     
-    private static final String ELEMENT = "DRMInfo";
+    private static final String CONTENT_PROTECTION_ELEMENT = "ContentProtection";
+    private static final String ATTR_SCHEME_ID_URI = "schemeIdUri";
+    
+    protected static final String CENC_PSSH_ELEMENT = "cenc:pssh";
+    
+    private static final String DRM_INFO_ELEMENT = "DRMInfo";
     private static final String ATTR_TYPE = "type";
     private static final String ATTR_VERSION = "version";
     
@@ -77,13 +87,73 @@ public abstract class DRMInfoPSSH implements MP4BoxXML {
     }
     
     /**
+     * Returns a DASH ContentProtection element that can be inserted
+     * into a DASH MPD
+     * 
+     * @param d the document that will hold the element
+     * @return the ContentProtection element
+     * @throws IOException
+     */
+    public Element generateContentProtection(Document d) throws IOException {
+        Element e = d.createElement(CONTENT_PROTECTION_ELEMENT);
+        e.setAttribute(ATTR_SCHEME_ID_URI, "urn:uuid:" + KeyPair.toGUID(systemID));
+        return e;
+    }
+    
+    /**
+     * Can be used by child classes to generate a base64-encoded version
+     * of the PSSH for inclusion in ContentProtection elements
+     * 
+     * @return base64-encoded PSSH
+     * @throws IOException
+     */
+    protected String getPSSHBase64() throws IOException {
+        ByteArrayOutputStream psshBytes = new ByteArrayOutputStream();
+        DataOutputStream pssh = new DataOutputStream(psshBytes);
+        
+        // Write size field
+        pssh.writeInt(pssh.size());
+        
+        // Write box-type
+        pssh.write('p'); pssh.write('s'); pssh.write('s'); pssh.write('h');
+        
+        // Write version
+        pssh.write(psshVersion & 0xFF);
+        
+        // KID list?
+        if (psshVersion > 0) {
+            pssh.writeInt(keyIDs.length);
+            for (int i = 0; i < keyIDs.length; i++) {
+                pssh.write(keyIDs[i]);
+            }
+        }
+        
+        // Write data
+        generatePSSHData(pssh);
+        
+        return Base64.encodeBase64String(psshBytes.toByteArray());
+    }
+    
+    /**
+     * Child classes who provide PSSH in base64 as their content protection
+     * data should write their PSSH data here starting with
+     * the "DataSize" field
+     * 
+     * @param dos output stream for writing PSSH data
+     * @throws IOException
+     */
+    protected void generatePSSHData(DataOutputStream dos) throws IOException {
+        throw new UnsupportedOperationException();
+    }
+    
+    /**
      * Generates the base DRMInfo element with a system ID child element
      * 
      * @param d the DOM Document
      * @return the element
      */
     protected Element generateDRMInfo(Document d) {
-       Element e = d.createElement(ELEMENT);
+       Element e = d.createElement(DRM_INFO_ELEMENT);
        e.setAttribute(ATTR_TYPE, "pssh");
        e.setAttribute(ATTR_VERSION, "" + psshVersion);
        

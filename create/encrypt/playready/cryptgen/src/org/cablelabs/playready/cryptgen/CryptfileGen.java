@@ -43,6 +43,7 @@ import org.cablelabs.cryptfile.DRMInfoPSSH;
 import org.cablelabs.playready.PlayReadyKeyPair;
 import org.cablelabs.playready.WRMHeader;
 import org.cablelabs.playready.cryptfile.PlayReadyPSSH;
+import org.w3c.dom.Document;
 
 public class CryptfileGen {
     
@@ -85,6 +86,9 @@ public class CryptfileGen {
         System.out.println("");
         System.out.println("\t-ck");
         System.out.println("\t\tAdd ClearKey PSSH to the cryptfile.");
+        System.out.println("");
+        System.out.println("\t-cp");
+        System.out.println("\t\tPrint a DASH <ContentProtection> element that can be pasted into the MPD");
     }
     
     private static class Track {
@@ -141,6 +145,9 @@ public class CryptfileGen {
         // Clearkey
         boolean clearkey = false;
         
+        // Print content protection element?
+        boolean printCP = false;
+        
         // Parse arguments
         for (int i = 0; i < args.length; i++) {
             
@@ -177,6 +184,9 @@ public class CryptfileGen {
                 }
                 else if ((subopts = checkOption("-ck", args, i, 0)) != null) {
                     clearkey = true;
+                }
+                else if ((subopts = checkOption("-cp", args, i, 0)) != null) {
+                    printCP = true;
                 }
                 else {
                     errorExit("Illegal argument: " + args[i]);
@@ -264,16 +274,34 @@ public class CryptfileGen {
             psshList.add(new ClearKeyPSSH(keyIDs));
         }
         
+        // Print ContentProtection element
+        if (printCP) {
+            System.out.println("############# Content Protection Element #############");
+            for (DRMInfoPSSH pssh : psshList) {
+                Document d = CryptfileBuilder.newDocument();
+                try {
+                    d.appendChild(pssh.generateContentProtection(d));
+                }
+                catch (IOException e) {
+                    System.out.println("Could not generate ContentProtection element!");
+                    continue;
+                }
+                CryptfileBuilder.writeXML(d, System.out);
+            }
+            System.out.println("######################################################");
+        }
+        
         // Create the cryptfile builder
         CryptfileBuilder cfBuilder = new CryptfileBuilder(CryptfileBuilder.ProtectionScheme.AES_CTR,
                                                           cryptTracks, psshList);
         
         // Write the output
-        cfBuilder.writeCryptfile(System.out);
+        Document d = cfBuilder.buildCryptfile();
+        CryptfileBuilder.writeXML(d, System.out);
         try {
             if (outfile != null) {
                 System.out.println("Writing cryptfile to: " + outfile);
-                cfBuilder.writeCryptfile(new FileOutputStream(outfile));
+                CryptfileBuilder.writeXML(d, new FileOutputStream(outfile));
             }
         }
         catch (FileNotFoundException e) {

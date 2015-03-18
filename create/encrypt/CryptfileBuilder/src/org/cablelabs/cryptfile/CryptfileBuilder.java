@@ -134,23 +134,14 @@ public class CryptfileBuilder {
     }
     
     /**
+     * Build the cryptfile document
      * 
-     * @param os
+     * @return the XML document
      */
-    public void writeCryptfile(OutputStream os) {
-        
-        // Create a new document
-        DocumentBuilder builder = null;
-        try {
-            builder = DocumentBuilderFactory.newInstance().newDocumentBuilder();
-        }
-        catch (ParserConfigurationException ex) {
-            System.out.println("Error creating XML DocumentBuilder: " + ex.getMessage());
-            System.exit(1);
-        }
-        Document d = builder.newDocument();
+    public Document buildCryptfile() {
         
         // Create our root node
+        Document d = newDocument();
         Element e = d.createElement(ELEMENT);
         e.setAttribute(ATTR_TYPE, "CENC " + scheme.toString());
         
@@ -165,6 +156,36 @@ public class CryptfileBuilder {
         // Add the root node to our document
         d.appendChild(e);
         
+        return d;
+    }
+    
+    /**
+     * Creates a new XML document
+     * 
+     * @return the document
+     */
+    public static Document newDocument() {
+        
+        // Create a new document
+        DocumentBuilder builder = null;
+        try {
+            builder = DocumentBuilderFactory.newInstance().newDocumentBuilder();
+        }
+        catch (ParserConfigurationException ex) {
+            System.out.println("Error creating XML DocumentBuilder: " + ex.getMessage());
+            System.exit(1);
+        }
+        return builder.newDocument();
+    }
+    
+    /**
+     * Writes an XML document in properly formatted style with indentation
+     * 
+     * @param d the XML document to write
+     * @param os the stream to write the document
+     */
+    public static void writeXML(Document d, OutputStream os) {
+        
         // Write the document to the desired output
         Transformer tf = null;
         try {
@@ -172,6 +193,7 @@ public class CryptfileBuilder {
             tf.setOutputProperty("{http://xml.apache.org/xslt}indent-amount", "2");
             tf.setOutputProperty(OutputKeys.ENCODING, "UTF-8");
             tf.setOutputProperty(OutputKeys.INDENT, "yes");
+            tf.setOutputProperty(OutputKeys.OMIT_XML_DECLARATION, "yes");
         }
         catch (Exception ex) {
             System.out.println("Error creating XML Transformer: " + ex.getMessage());
@@ -188,5 +210,4 @@ public class CryptfileBuilder {
             System.exit(1);;
         }
     }
-    
 }
