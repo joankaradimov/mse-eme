@@ -29,7 +29,6 @@ package org.cablelabs.clearkey.cryptfile;
 import java.io.DataOutputStream;
 import java.io.IOException;
 
-import org.cablelabs.cryptfile.Bitstream;
 import org.cablelabs.cryptfile.DRMInfoPSSH;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -71,11 +70,6 @@ public class ClearKeyPSSH extends DRMInfoPSSH {
     @Override
     public Node generateXML(Document d) {
         Element e = generateDRMInfo(d);
-                
-        // 0 data size  
-        Bitstream b = new Bitstream();
-        b.setupInteger(0, 32);
-        e.appendChild(b.generateXML(d));
         return e;
     }
 }
