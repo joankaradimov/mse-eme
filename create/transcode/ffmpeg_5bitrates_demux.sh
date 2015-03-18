@@ -1,4 +1,4 @@
-#!/bin/bash -x
+#!/bin/bash 
 
 # Copyright (c) 2014, CableLabs, Inc.
 # All rights reserved.
@@ -57,7 +57,7 @@ function transcode_video {
   level=$4
   outdir=$5
   infile=$6
-  outfile=abr_`echo $res | sed 's/:/x/'`_h264-${vbitrate}.mp4
+  outfile=video_`echo $res | sed 's/:/x/'`_h264-${vbitrate}.mp4
 
   $ffmpeg -i $infile -s $res -map_chapters -1 -maxrate $vbitrate -minrate $vbitrate -bufsize $vbitrate -an -codec:v libx264 -profile:v $profile -level $level -b:v $vbitrate -x264opts "keyint=$framerate:min-keyint=$framerate:no-scenecut" $outdir/$outfile
 }
@@ -66,7 +66,7 @@ function transcode_audio {
   abitrate=$1
   outdir=$2
   infile=$3
-  outfile=abr_aac-lc_${abitrate}.mp4
+  outfile=audio_aac-lc_${abitrate}.mp4
 
   $ffmpeg -i $infile -map_chapters -1 -vn -codec:a libfdk_aac -profile:a aac_low -b:a $abitrate $outdir/$outfile
 }
