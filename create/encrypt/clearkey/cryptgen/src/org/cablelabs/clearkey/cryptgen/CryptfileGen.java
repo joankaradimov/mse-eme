@@ -33,6 +33,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.codec.binary.Hex;
@@ -52,7 +53,7 @@ public class CryptfileGen {
     private static void usage() {
         System.out.println("ClearKey MP4Box cryptfile generation tool.");
         System.out.println("");
-        System.out.println("usage:  CryptfileGen [OPTIONS] <track_id>:{@<key_file>|<key_id>=<key>[,<key_id>=<key>...]} [<track_id>:{@<key_file>|<key_id>=<key>[,<key_id>=<key>...]}]...");
+        System.out.println("usage:  CryptfileGen [OPTIONS] <track_id>:{@<key_file>|<key_id>=[<key>][,<key_id>=[<key>]...]} [<track_id>:{@<key_file>|<key_id>=[<key>][,<key_id>=[<key>]...]}]...");
         System.out.println("");
         System.out.println("\t<track_id> is the track ID from the MP4 file to be encrypted.");
         System.out.println("\tAfter the '<track_id>:', you can specify either a file containing key/keyID pairs");
@@ -66,6 +67,7 @@ public class CryptfileGen {
         System.out.println("\t\t<keyid> is a key ID in GUID form.");
         System.out.println("");
         System.out.println("\t\t<key> is a 16-byte key value in hexadecimal (with or without the leading '0x').");
+        System.out.println("\t\tIf key is ommitted, a random key will be generated for you.");
         System.out.println("");
         System.out.println("\tOPTIONS:");
         System.out.println("");
@@ -193,10 +195,16 @@ public class CryptfileGen {
                     String[] keypairsarg = track_desc[1].split(",");
                     for (String keypairs : keypairsarg) {
                         String[] keypair = keypairs.split("=");
-                        if (keypair.length != 2) {
-                            errorExit("Illegal keypair : " + keypairs);
+                        if (keypair.length == 2) {
+                            t.keypairs.add(new KeyPair(keypair[0], keypair[1]));
+                        } else if (keypair.length == 1) {
+                            Random r = new Random();
+                            byte[] key = new byte[16];
+                            r.nextBytes(key);
+                            t.keypairs.add(new KeyPair(keypair[0], key));
+                        } else {
+                            errorExit("Illegal keypair: " + keypairs);
                         }
-                        t.keypairs.add(new KeyPair(keypair[0], keypair[1]));
                     }
                 }
                 
