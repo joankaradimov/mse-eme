@@ -26,207 +26,201 @@
 
 package org.cablelabs.drmtoday.cryptgen;
 
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Properties;
 
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.codec.binary.Hex;
 import org.cablelabs.clearkey.cryptfile.ClearKeyPSSH;
+import org.cablelabs.cmdline.CmdLine;
 import org.cablelabs.cryptfile.CryptKey;
 import org.cablelabs.cryptfile.CryptTrack;
 import org.cablelabs.cryptfile.CryptfileBuilder;
 import org.cablelabs.cryptfile.DRMInfoPSSH;
 import org.cablelabs.cryptfile.KeyPair;
-import org.cablelabs.widevine.Track;
-import org.cablelabs.widevine.TrackType;
-import org.cablelabs.widevine.cryptfile.WidevinePSSH;
-import org.cablelabs.widevine.keyreq.KeyRequest;
-import org.cablelabs.widevine.keyreq.ResponseMessage;
-import org.cablelabs.widevine.proto.WidevinePSSHProtoBuf;
 import org.w3c.dom.DOMException;
 import org.w3c.dom.Document;
 
-import com.google.protobuf.InvalidProtocolBufferException;
-
 /**
- * This utility will build a MP4Box Widevine cryptfile for a given piece of content.  The steps
+ * This utility will build a MP4Box cryptfile for a given piece of content using DRMToday.  The steps
  * involved are:
  * <ol>
- *   <li>Request encryption keys/keyIDs from the Widevine key server for each track</li>
- *   <li>Build the Widevine PSSH</li>
+ *   <li>Generate randomg keys/keyIDs for each track</li>
+ *   <li>Ingest the created keys into the CommonEncryption keystore for the given DRMToday account</li>
+ *   <li>Generate the PSSH boxes for each desired DRM as returned by the DRMToday key ingest</li>
  *   <li>Generate the MP4Box cryptfile</li>
  * </ol>
  *
+ * The 
  */
 public class CryptfileGen {
 
-    private static void usage() {
-        System.out.println("Google Widevine MP4Box cryptfile generation tool.");
-        System.out.println("");
-        System.out.println("usage:  CryptfileGen [OPTIONS] <content_id> <track_id>:<track_type> [<track_id>:<track_type>]...");
-        System.out.println("");
-        System.out.println("\t<content_id> is a unique string representing the content to be encrypted");
-        System.out.println("");
-        System.out.println("\t<track_id> is the track ID from the MP4 file to be encrypted");
-        System.out.println("");
-        System.out.println("\t<track_type> is one of HD, SD, or AUDIO describing the type of the associated track");
-        System.out.println("");
-        System.out.println("\tOPTIONS:");
-        System.out.println("");
-        System.out.println("\t-help");
-        System.out.println("\t\tDisplay this usage message.");
-        System.out.println("");
-        System.out.println("\t-out <filename>");
-        System.out.println("\t\tIf present, the cryptfile will be written to the given file. Otherwise output will be");
-        System.out.println("\t\twritten to stdout");
-        System.out.println("");
-        System.out.println("\t-sign <sign_props_file>");
-        System.out.println("\t\tIf present, key requests will be signed with the given key information.  <sign_props_file> is");
-        System.out.println("\t\ta Java properties file with the following properties:");
-        System.out.println("\t\t\turl:      Your assigned key server URL");
-        System.out.println("\t\t\tkey:      Your assigned 32-byte signing key, base64 notation");
-        System.out.println("\t\t\tiv:       Your assigned 16-byte initialization vector, base64 notation");
-        System.out.println("\t\t\tprovider: Your assigned provider name");
-        System.out.println("\t\tIf this argument is not present, the requests will be unsigned and the");
-        System.out.println("\t\t\"widevine_test\" provider and URL will be used");
-        System.out.println("");
-        System.out.println("\t-roll <start_time>,<key_count>,<sample_count>");
-        System.out.println("\t\tUsed for rolling keys only.  <start_time> is the integer time basis for the first");
-        System.out.println("\t\trequested key.  Could be epoch or media time or anything else meaningful.  <key_count>");
-        System.out.println("\t\tis the integer number of keys requested.  <sample_count> is the number of consecutive");
-        System.out.println("\t\tsamples to be encrypted with each key before moving to the next.");
-        System.out.println("");
-        System.out.println("\t-ck");
-        System.out.println("\t\tAdd ClearKey PSSH to the cryptfile.");
-        System.out.println("");
-        System.out.println("\t-cp");
-        System.out.println("\t\tPrint a DASH <ContentProtection> element that can be pasted into the MPD");
+    private static class Usage implements org.cablelabs.cmdline.Usage {
+        public void usage() {
+            System.out.println("DRMToday MP4Box cryptfile generation tool.");
+            System.out.println("");
+            System.out.println("usage:  CryptfileGen [OPTIONS] <drmtoday_props_file> <assetId> <track_id>:<track_type> [<track_id>:<track_type>]...");
+            System.out.println("");
+            System.out.println("\t<drmtoday_props_file>");
+            System.out.println("\t\tDRMToday properties file that contains merchant login info.  <drmtoday_props_file>");
+            System.out.println("\t\tis a Java properties file with the following properties:");
+            System.out.println("\t\t\tmerchant: Your assigned merchant ID");
+            System.out.println("\t\t\tpassword: Your merchant password");
+            System.out.println("");
+            System.out.println("\t<assetId> The DRMToday assetId");
+            System.out.println("");
+            System.out.println("\t<track_id> is the track ID from the MP4 file to be encrypted");
+            System.out.println("");
+            System.out.println("\t<track_type> is one of AUDIO, VIDEO, or VIDEO_AUDIO describing the content type of the");
+            System.out.println("\tassociated track");
+            System.out.println("");
+            System.out.println("\tOPTIONS:");
+            System.out.println("");
+            System.out.println("\t-help");
+            System.out.println("\t\tDisplay this usage message.");
+            System.out.println("");
+            System.out.println("\t-out <filename>");
+            System.out.println("\t\tIf present, the cryptfile will be written to the given file. Otherwise output will be");
+            System.out.println("\t\twritten to stdout");
+            System.out.println("");
+            System.out.println("\t-variantId");
+            System.out.println("\t\tOptional DRMToday asset variantId.");
+            System.out.println("");
+            System.out.println("\t-ck");
+            System.out.println("\t\tAdd ClearKey PSSH to the cryptfile.");
+            System.out.println("");
+            System.out.println("\t-wv");
+            System.out.println("\t\tAdd Widevine PSSH to the cryptfile.");
+            System.out.println("");
+            System.out.println("\t-pr");
+            System.out.println("\t\tAdd PlayReady PSSH to the cryptfile.");
+            System.out.println("");
+            System.out.println("\t-cp");
+            System.out.println("\t\tPrint a DASH <ContentProtection> element (for each DRM) that can be pasted into the MPD");
+        }
     }
     
-    private static void invalidOption(String option) {
-        errorExit("Invalid argument specification for " + option);
+    private enum StreamType {
+        VIDEO,
+        AUDIO,
+        VIDEO_AUDIO,
+        NUM_TYPES
     }
     
-    // Check for the presence of an option argument and validate that there are enough sub-options to
-    // satisfy the option's requirements
-    private static String[] checkOption(String optToCheck, String[] args, int current,
-            int minSubopts, int maxSubopts) {
-        if (!args[current].equals(optToCheck))
-            return null;
-        
-        // No sub-options required
-        if (minSubopts == 0 && maxSubopts == 0)
-            return new String[0];
-        
-        // Validate that the sub-options are present
-        if (args.length < current + 1)
-            invalidOption(optToCheck);
-        
-        // Check that the sub-options present satifsy the min/max requirements
-        String[] subopts = args[current+1].split(",");
-        if (subopts.length < minSubopts || subopts.length > maxSubopts)
-            invalidOption(optToCheck);
-        
-        return subopts;
-    }
-    private static String[] checkOption(String optToCheck, String[] args, int current, int subopts) {
-        return checkOption(optToCheck, args, current, subopts, subopts);
-    }
-    
-    private static void errorExit(String errorString) {
-        usage();
-        System.err.println(errorString);
-        System.exit(1);;
+    private static class Track {
+        int id;
+        KeyPair keypair;
+        StreamType streamType;
     }
     
     public static void main(String[] args) {
+        
+        CmdLine cmdline = new CmdLine(new Usage());
 
-        // Track list -- one slot for each track type
-        Track[] track_args = new Track[TrackType.NUM_TYPES.ordinal()];
+        // Tracks
+        Track[] track_args = new Track[StreamType.NUM_TYPES.ordinal()];
         
-        // Should the request be signed
-        String signingFile = null;
+        // DRMToday login properties file
+        String loginPropsFile = null;
         
-        // Rolling keys
-        int rollingKeyStart = -1;
-        int rollingKeyCount = -1;
-        int rollingKeySamples = -1;
+        String assetId = null;
+        String variantId = null;
         
         String outfile = null;
         
-        // Clearkey
+        // DRMs
         boolean clearkey = false;
+        boolean widevine = false;
+        boolean playready = false;
         
         // Print content protection element?
         boolean printCP = false;
         
         // Parse arguments
-        String content_id_str = null;
         for (int i = 0; i < args.length; i++) {
             
             // Parse options
             if (args[i].startsWith("-")) {
                 String[] subopts;
-                if ((subopts = checkOption("-help", args, i, 0)) != null ||
-                     (subopts = checkOption("-h", args, i, 0)) != null) {
-                    usage();
+                if ((subopts = cmdline.checkOption("-help", args, i, 0)) != null ||
+                     (subopts = cmdline.checkOption("-h", args, i, 0)) != null) {
+                    (new Usage()).usage();
                     System.exit(0);
                 }
-                else if ((subopts = checkOption("-out", args, i, 1)) != null) {
+                else if ((subopts = cmdline.checkOption("-out", args, i, 1)) != null) {
                     outfile = subopts[0];
                     i++;
                 }
-                else if ((subopts = checkOption("-sign", args, i, 1)) != null) {
-                    signingFile = subopts[0];
+                else if ((subopts = cmdline.checkOption("-variantId", args, i, 1)) != null) {
+                    variantId = subopts[0];
                     i++;
                 }
-                else if ((subopts = checkOption("-ck", args, i, 0)) != null) {
+                else if ((subopts = cmdline.checkOption("-ck", args, i, 0)) != null) {
                     clearkey = true;
                 }
-                else if ((subopts = checkOption("-roll", args, i, 3)) != null) {
-                    rollingKeyStart = Integer.parseInt(subopts[0]);
-                    rollingKeyCount = Integer.parseInt(subopts[1]);
-                    rollingKeySamples = Integer.parseInt(subopts[2]);
-                    i++;
+                else if ((subopts = cmdline.checkOption("-wv", args, i, 0)) != null) {
+                    widevine = true;
                 }
-                else if ((subopts = checkOption("-cp", args, i, 0)) != null) {
+                else if ((subopts = cmdline.checkOption("-pr", args, i, 0)) != null) {
+                    playready = true;
+                }
+                else if ((subopts = cmdline.checkOption("-cp", args, i, 0)) != null) {
                     printCP = true;
                 }
                 else {
-                    errorExit("Illegal argument: " + args[i]);
+                    cmdline.errorExit("Illegal argument: " + args[i]);
                 }
                 
                 continue;
             }
             
-            // Get content ID
-            if (content_id_str == null) {
-                content_id_str = args[i];
+            // Get login properties file
+            if (loginPropsFile == null) {
+                loginPropsFile = args[i];
+                continue;
+            }
+            
+            // Get login properties file
+            if (assetId == null) {
+                assetId = args[i];
                 continue;
             }
             
             // Parse tracks
             String track_desc[] = args[i].split(":");
             if (track_desc.length != 2) {
-                errorExit("Illegal track specification: " + args[i]);
+                cmdline.errorExit("Illegal track specification: " + args[i]);
             }
             try {
                 Track t = new Track();
-                TrackType trackType = TrackType.valueOf(track_desc[1]);
-                t.type = trackType;
+                StreamType streamType = StreamType.valueOf(track_desc[1]);
+                t.streamType = streamType;
                 t.id = Integer.parseInt(track_desc[0]);
-                track_args[t.type.ordinal()] = t;
+                t.keypair = KeyPair.random(); // Create a random key pair
+                track_args[t.streamType.ordinal()] = t;
             }
             catch (IllegalArgumentException e) {
-                errorExit("Illegal track_type -- " + track_desc[1]);
+                cmdline.errorExit("Illegal track_type -- " + track_desc[1]);
             }
         }
         
-        if (content_id_str == null) {
-            errorExit("Must specify content_id string!");
+        if (loginPropsFile == null) {
+            cmdline.errorExit("Must specify login props file!");
+        }
+        
+        if (assetId == null) {
+            cmdline.errorExit("Must specify assetId!");
+        }
+        
+        // Validate track stream types.  Can have AUDIO and/or VIDEO or VIDEO_AUDIO
+        if (track_args[StreamType.VIDEO_AUDIO.ordinal()] != null &&
+            (track_args[StreamType.VIDEO.ordinal()] != null || track_args[StreamType.AUDIO.ordinal()] != null)) {
+            cmdline.errorExit("Illegal track specification!  Can have (AUDIO and/or VIDEO) or (VIDEO_AUDIO) only!");
         }
         
         // Request keys
@@ -236,7 +230,17 @@ public class CryptfileGen {
                 trackList.add(t);
         }
         if (trackList.isEmpty()) {
-            errorExit("Must specify at least one track!");
+            cmdline.errorExit("Must specify at least one track!");
+        }
+        
+        // Login
+        String ticket;
+        String merchant;
+        String password;
+        try {
+            
+        } catch (Exception e) {
+            cmdline.errorExit(e.getMessage());
         }
         
         KeyRequest request = (rollingKeyCount != -1 && rollingKeyStart != -1) ?
@@ -344,7 +348,7 @@ public class CryptfileGen {
             }
         }
         catch (FileNotFoundException e) {
-            errorExit("Could not open output file (" + outfile + ") for writing");
+            cmdline.errorExit("Could not open output file (" + outfile + ") for writing");
         }
         
     }
