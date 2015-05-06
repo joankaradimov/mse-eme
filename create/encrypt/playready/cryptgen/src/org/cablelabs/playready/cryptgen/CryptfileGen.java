@@ -37,6 +37,7 @@ import java.util.List;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.codec.binary.Hex;
 import org.cablelabs.clearkey.cryptfile.ClearKeyPSSH;
+import org.cablelabs.cmdline.CmdLine;
 import org.cablelabs.cryptfile.CryptKey;
 import org.cablelabs.cryptfile.CryptTrack;
 import org.cablelabs.cryptfile.CryptfileBuilder;
@@ -48,48 +49,50 @@ import org.w3c.dom.Document;
 
 public class CryptfileGen {
     
-    private static void usage() {
-        System.out.println("Microsoft PlayReady MP4Box cryptfile generation tool.");
-        System.out.println("");
-        System.out.println("usage:  CryptfileGen [OPTIONS] <track_id>:{@<keyid_file>|<key_id>[,<key_id>...]} [<track_id>:{@<keyid_file>|<key_id>[,<key_id>...]}]...");
-        System.out.println("");
-        System.out.println("\t<track_id> is the track ID from the MP4 file to be encrypted.");
-        System.out.println("\tAfter the '<track_id>:', you can specify either a file containing key IDs OR a");
-        System.out.println("\tcomma-separated list of key IDs.  Key IDs are always represented in GUID form");
-        System.out.println("\t(xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx). Multiple key IDs indicate the use of");
-        System.out.println("\trolling keys.");
-        System.out.println("");
-        System.out.println("\t\t<keyid_file> is a file that contains a list of key IDs, one key ID per line.");
-        System.out.println("");
-        System.out.println("\t\t<keyid> is a key ID in GUID form.");
-        System.out.println("");
-        System.out.println("\tOPTIONS:");
-        System.out.println("");
-        System.out.println("\t-help");
-        System.out.println("\t\tDisplay this usage message.");
-        System.out.println("");
-        System.out.println("\t-out <filename>");
-        System.out.println("\t\tIf present, the cryptfile will be written to the given file. Otherwise output will be");
-        System.out.println("\t\twritten to stdout.");
-        System.out.println("");
-        System.out.println("\t-version {4000|4100}");
-        System.out.println("\t\tIf present, specifies the WRMHeader version to generate.  Must be either '4000' for v4.0.0.0");
-        System.out.println("\t\tor '4100' for v4.1.0.0.  Default is '4000'.");
-        System.out.println("");
-        System.out.println("\t-url <license_url>");
-        System.out.println("\t\tIf present, specifies the license URL to embed in the WRMHeaders.  If not specified, will");
-        System.out.println("\t\tuse the default url of:");
-        System.out.println("\t\t'http://playready.directtaps.net/pr/svc/rightsmanager.asmx?PlayRight=1&UseSimpleNonPersistentLicense=1'");
-        System.out.println("");
-        System.out.println("\t-roll <sample_count>");
-        System.out.println("\t\tUsed for rolling keys only.  <sample_count> is the number of consecutive samples to be");
-        System.out.println("\t\tencrypted with each key before moving to the next.");
-        System.out.println("");
-        System.out.println("\t-ck");
-        System.out.println("\t\tAdd ClearKey PSSH to the cryptfile.");
-        System.out.println("");
-        System.out.println("\t-cp");
-        System.out.println("\t\tPrint a DASH <ContentProtection> element that can be pasted into the MPD");
+    private static class Usage implements org.cablelabs.cmdline.Usage {
+        public void usage() {
+            System.out.println("Microsoft PlayReady MP4Box cryptfile generation tool.");
+            System.out.println("");
+            System.out.println("usage:  CryptfileGen [OPTIONS] <track_id>:{@<keyid_file>|<key_id>[,<key_id>...]} [<track_id>:{@<keyid_file>|<key_id>[,<key_id>...]}]...");
+            System.out.println("");
+            System.out.println("\t<track_id> is the track ID from the MP4 file to be encrypted.");
+            System.out.println("\tAfter the '<track_id>:', you can specify either a file containing key IDs OR a");
+            System.out.println("\tcomma-separated list of key IDs.  Key IDs are always represented in GUID form");
+            System.out.println("\t(xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx). Multiple key IDs indicate the use of");
+            System.out.println("\trolling keys.");
+            System.out.println("");
+            System.out.println("\t\t<keyid_file> is a file that contains a list of key IDs, one key ID per line.");
+            System.out.println("");
+            System.out.println("\t\t<keyid> is a key ID in GUID form.");
+            System.out.println("");
+            System.out.println("\tOPTIONS:");
+            System.out.println("");
+            System.out.println("\t-help");
+            System.out.println("\t\tDisplay this usage message.");
+            System.out.println("");
+            System.out.println("\t-out <filename>");
+            System.out.println("\t\tIf present, the cryptfile will be written to the given file. Otherwise output will be");
+            System.out.println("\t\twritten to stdout.");
+            System.out.println("");
+            System.out.println("\t-version {4000|4100}");
+            System.out.println("\t\tIf present, specifies the WRMHeader version to generate.  Must be either '4000' for v4.0.0.0");
+            System.out.println("\t\tor '4100' for v4.1.0.0.  Default is '4000'.");
+            System.out.println("");
+            System.out.println("\t-url <license_url>");
+            System.out.println("\t\tIf present, specifies the license URL to embed in the WRMHeaders.  If not specified, will");
+            System.out.println("\t\tuse the default url of:");
+            System.out.println("\t\t'http://playready.directtaps.net/pr/svc/rightsmanager.asmx?PlayRight=1&UseSimpleNonPersistentLicense=1'");
+            System.out.println("");
+            System.out.println("\t-roll <sample_count>");
+            System.out.println("\t\tUsed for rolling keys only.  <sample_count> is the number of consecutive samples to be");
+            System.out.println("\t\tencrypted with each key before moving to the next.");
+            System.out.println("");
+            System.out.println("\t-ck");
+            System.out.println("\t\tAdd ClearKey PSSH to the cryptfile.");
+            System.out.println("");
+            System.out.println("\t-cp");
+            System.out.println("\t\tPrint a DASH <ContentProtection> element that can be pasted into the MPD");
+        }
     }
     
     private static class Track {
@@ -97,44 +100,10 @@ public class CryptfileGen {
         int id;
     }
     
-    private static void invalidOption(String option) {
-        errorExit("Invalid argument specification for " + option);
-    }
-    
-    // Check for the presence of an option argument and validate that there are enough sub-options to
-    // satisfy the option's requirements
-    private static String[] checkOption(String optToCheck, String[] args, int current,
-            int minSubopts, int maxSubopts) {
-        if (!args[current].equals(optToCheck))
-            return null;
-        
-        // No sub-options required
-        if (minSubopts == 0 && maxSubopts == 0)
-            return new String[0];
-        
-        // Validate that the sub-options are present
-        if (args.length < current + 1)
-            invalidOption(optToCheck);
-        
-        // Check that the sub-options present satifsy the min/max requirements
-        String[] subopts = args[current+1].split(",");
-        if (subopts.length < minSubopts || subopts.length > maxSubopts)
-            invalidOption(optToCheck);
-        
-        return subopts;
-    }
-    private static String[] checkOption(String optToCheck, String[] args, int current, int subopts) {
-        return checkOption(optToCheck, args, current, subopts, subopts);
-    }
-    
-    private static void errorExit(String errorString) {
-        usage();
-        System.err.println(errorString);
-        System.exit(1);;
-    }
-    
     public static void main(String[] args) {
 
+        CmdLine cmdline = new CmdLine(new Usage());
+        
         // Rolling keys
         int rollingKeySamples = -1;
         
@@ -155,15 +124,15 @@ public class CryptfileGen {
             // Parse options
             if (args[i].startsWith("-")) {
                 String[] subopts;
-                if ((subopts = checkOption("-help", args, i, 0)) != null) {
-                    usage();
+                if ((subopts = cmdline.checkOption("-help", args, i, 0)) != null) {
+                    (new Usage()).usage();
                     System.exit(0);
                 }
-                else if ((subopts = checkOption("-out", args, i, 1)) != null) {
+                else if ((subopts = cmdline.checkOption("-out", args, i, 1)) != null) {
                     outfile = subopts[0];
                     i++;
                 }
-                else if ((subopts = checkOption("-version", args, i, 1)) != null) {
+                else if ((subopts = cmdline.checkOption("-version", args, i, 1)) != null) {
                     if ("4000".equals(subopts[0])) {
                         headerVersion = WRMHeader.Version.V_4000;
                     }
@@ -171,26 +140,26 @@ public class CryptfileGen {
                         headerVersion = WRMHeader.Version.V_4000;
                     }
                     else {
-                        errorExit("Illegal WRMHeader version: " + subopts[0]);
+                        cmdline.errorExit("Illegal WRMHeader version: " + subopts[0]);
                     }
                     i++;
                 }
-                else if ((subopts = checkOption("-roll", args, i, 1)) != null) {
+                else if ((subopts = cmdline.checkOption("-roll", args, i, 1)) != null) {
                     rollingKeySamples = Integer.parseInt(subopts[0]);
                     i++;
                 }
-                else if ((subopts = checkOption("-url", args, i, 1)) != null) {
+                else if ((subopts = cmdline.checkOption("-url", args, i, 1)) != null) {
                     url = subopts[0];
                     i++;
                 }
-                else if ((subopts = checkOption("-ck", args, i, 0)) != null) {
+                else if ((subopts = cmdline.checkOption("-ck", args, i, 0)) != null) {
                     clearkey = true;
                 }
-                else if ((subopts = checkOption("-cp", args, i, 0)) != null) {
+                else if ((subopts = cmdline.checkOption("-cp", args, i, 0)) != null) {
                     printCP = true;
                 }
                 else {
-                    errorExit("Illegal argument: " + args[i]);
+                    cmdline.errorExit("Illegal argument: " + args[i]);
                 }
                 
                 continue;
@@ -199,7 +168,7 @@ public class CryptfileGen {
             // Parse tracks
             String track_desc[] = args[i].split(":");
             if (track_desc.length != 2) {
-                errorExit("Illegal track specification: " + args[i]);
+                cmdline.errorExit("Illegal track specification: " + args[i]);
             }
             try {
                 Track t = new Track();
@@ -225,13 +194,13 @@ public class CryptfileGen {
                 tracks.add(t);
             }
             catch (IllegalArgumentException e) {
-                errorExit("Illegal track specification (" + e.getMessage() + ") -- " + track_desc[1]);
+                cmdline.errorExit("Illegal track specification (" + e.getMessage() + ") -- " + track_desc[1]);
             }
             catch (FileNotFoundException e) {
-                errorExit("Key ID file not found: " + e.getMessage());
+                cmdline.errorExit("Key ID file not found: " + e.getMessage());
             }
             catch (IOException e) {
-                errorExit("Error reading from Key ID file: " + e.getMessage());
+                cmdline.errorExit("Error reading from Key ID file: " + e.getMessage());
             }
         }
         
@@ -308,7 +277,7 @@ public class CryptfileGen {
             }
         }
         catch (FileNotFoundException e) {
-            errorExit("Could not open output file (" + outfile + ") for writing");
+            cmdline.errorExit("Could not open output file (" + outfile + ") for writing");
         }
     }
 }

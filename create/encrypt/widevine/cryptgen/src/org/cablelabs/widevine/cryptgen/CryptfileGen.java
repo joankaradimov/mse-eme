@@ -35,6 +35,7 @@ import java.util.List;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.codec.binary.Hex;
 import org.cablelabs.clearkey.cryptfile.ClearKeyPSSH;
+import org.cablelabs.cmdline.CmdLine;
 import org.cablelabs.cryptfile.CryptKey;
 import org.cablelabs.cryptfile.CryptTrack;
 import org.cablelabs.cryptfile.CryptfileBuilder;
@@ -46,7 +47,6 @@ import org.cablelabs.widevine.cryptfile.WidevinePSSH;
 import org.cablelabs.widevine.keyreq.KeyRequest;
 import org.cablelabs.widevine.keyreq.ResponseMessage;
 import org.cablelabs.widevine.proto.WidevinePSSHProtoBuf;
-import org.w3c.dom.DOMException;
 import org.w3c.dom.Document;
 
 import com.google.protobuf.InvalidProtocolBufferException;
@@ -63,87 +63,55 @@ import com.google.protobuf.InvalidProtocolBufferException;
  */
 public class CryptfileGen {
 
-    private static void usage() {
-        System.out.println("Google Widevine MP4Box cryptfile generation tool.");
-        System.out.println("");
-        System.out.println("usage:  CryptfileGen [OPTIONS] <content_id> <track_id>:<track_type> [<track_id>:<track_type>]...");
-        System.out.println("");
-        System.out.println("\t<content_id> is a unique string representing the content to be encrypted");
-        System.out.println("");
-        System.out.println("\t<track_id> is the track ID from the MP4 file to be encrypted");
-        System.out.println("");
-        System.out.println("\t<track_type> is one of HD, SD, or AUDIO describing the type of the associated track");
-        System.out.println("");
-        System.out.println("\tOPTIONS:");
-        System.out.println("");
-        System.out.println("\t-help");
-        System.out.println("\t\tDisplay this usage message.");
-        System.out.println("");
-        System.out.println("\t-out <filename>");
-        System.out.println("\t\tIf present, the cryptfile will be written to the given file. Otherwise output will be");
-        System.out.println("\t\twritten to stdout");
-        System.out.println("");
-        System.out.println("\t-sign <sign_props_file>");
-        System.out.println("\t\tIf present, key requests will be signed with the given key information.  <sign_props_file> is");
-        System.out.println("\t\ta Java properties file with the following properties:");
-        System.out.println("\t\t\turl:      Your assigned key server URL");
-        System.out.println("\t\t\tkey:      Your assigned 32-byte signing key, base64 notation");
-        System.out.println("\t\t\tiv:       Your assigned 16-byte initialization vector, base64 notation");
-        System.out.println("\t\t\tprovider: Your assigned provider name");
-        System.out.println("\t\tIf this argument is not present, the requests will be unsigned and the");
-        System.out.println("\t\t\"widevine_test\" provider and URL will be used");
-        System.out.println("");
-        System.out.println("\t-roll <start_time>,<key_count>,<sample_count>");
-        System.out.println("\t\tUsed for rolling keys only.  <start_time> is the integer time basis for the first");
-        System.out.println("\t\trequested key.  Could be epoch or media time or anything else meaningful.  <key_count>");
-        System.out.println("\t\tis the integer number of keys requested.  <sample_count> is the number of consecutive");
-        System.out.println("\t\tsamples to be encrypted with each key before moving to the next.");
-        System.out.println("");
-        System.out.println("\t-ck");
-        System.out.println("\t\tAdd ClearKey PSSH to the cryptfile.");
-        System.out.println("");
-        System.out.println("\t-cp");
-        System.out.println("\t\tPrint a DASH <ContentProtection> element that can be pasted into the MPD");
-    }
-    
-    private static void invalidOption(String option) {
-        errorExit("Invalid argument specification for " + option);
-    }
-    
-    // Check for the presence of an option argument and validate that there are enough sub-options to
-    // satisfy the option's requirements
-    private static String[] checkOption(String optToCheck, String[] args, int current,
-            int minSubopts, int maxSubopts) {
-        if (!args[current].equals(optToCheck))
-            return null;
-        
-        // No sub-options required
-        if (minSubopts == 0 && maxSubopts == 0)
-            return new String[0];
-        
-        // Validate that the sub-options are present
-        if (args.length < current + 1)
-            invalidOption(optToCheck);
-        
-        // Check that the sub-options present satifsy the min/max requirements
-        String[] subopts = args[current+1].split(",");
-        if (subopts.length < minSubopts || subopts.length > maxSubopts)
-            invalidOption(optToCheck);
-        
-        return subopts;
-    }
-    private static String[] checkOption(String optToCheck, String[] args, int current, int subopts) {
-        return checkOption(optToCheck, args, current, subopts, subopts);
-    }
-    
-    private static void errorExit(String errorString) {
-        usage();
-        System.err.println(errorString);
-        System.exit(1);;
+    private static class Usage implements org.cablelabs.cmdline.Usage {
+        public void usage() {
+            System.out.println("Google Widevine MP4Box cryptfile generation tool.");
+            System.out.println("");
+            System.out.println("usage:  CryptfileGen [OPTIONS] <content_id> <track_id>:<track_type> [<track_id>:<track_type>]...");
+            System.out.println("");
+            System.out.println("\t<content_id> is a unique string representing the content to be encrypted");
+            System.out.println("");
+            System.out.println("\t<track_id> is the track ID from the MP4 file to be encrypted");
+            System.out.println("");
+            System.out.println("\t<track_type> is one of HD, SD, or AUDIO describing the type of the associated track");
+            System.out.println("");
+            System.out.println("\tOPTIONS:");
+            System.out.println("");
+            System.out.println("\t-help");
+            System.out.println("\t\tDisplay this usage message.");
+            System.out.println("");
+            System.out.println("\t-out <filename>");
+            System.out.println("\t\tIf present, the cryptfile will be written to the given file. Otherwise output will be");
+            System.out.println("\t\twritten to stdout");
+            System.out.println("");
+            System.out.println("\t-sign <sign_props_file>");
+            System.out.println("\t\tIf present, key requests will be signed with the given key information.  <sign_props_file> is");
+            System.out.println("\t\ta Java properties file with the following properties:");
+            System.out.println("\t\t\turl:      Your assigned key server URL");
+            System.out.println("\t\t\tkey:      Your assigned 32-byte signing key, base64 notation");
+            System.out.println("\t\t\tiv:       Your assigned 16-byte initialization vector, base64 notation");
+            System.out.println("\t\t\tprovider: Your assigned provider name");
+            System.out.println("\t\tIf this argument is not present, the requests will be unsigned and the");
+            System.out.println("\t\t\"widevine_test\" provider and URL will be used");
+            System.out.println("");
+            System.out.println("\t-roll <start_time>,<key_count>,<sample_count>");
+            System.out.println("\t\tUsed for rolling keys only.  <start_time> is the integer time basis for the first");
+            System.out.println("\t\trequested key.  Could be epoch or media time or anything else meaningful.  <key_count>");
+            System.out.println("\t\tis the integer number of keys requested.  <sample_count> is the number of consecutive");
+            System.out.println("\t\tsamples to be encrypted with each key before moving to the next.");
+            System.out.println("");
+            System.out.println("\t-ck");
+            System.out.println("\t\tAdd ClearKey PSSH to the cryptfile.");
+            System.out.println("");
+            System.out.println("\t-cp");
+            System.out.println("\t\tPrint a DASH <ContentProtection> element that can be pasted into the MPD");
+        }
     }
     
     public static void main(String[] args) {
 
+        CmdLine cmdline = new CmdLine(new Usage());
+        
         // Track list -- one slot for each track type
         Track[] track_args = new Track[TrackType.NUM_TYPES.ordinal()];
         
@@ -170,33 +138,33 @@ public class CryptfileGen {
             // Parse options
             if (args[i].startsWith("-")) {
                 String[] subopts;
-                if ((subopts = checkOption("-help", args, i, 0)) != null ||
-                     (subopts = checkOption("-h", args, i, 0)) != null) {
-                    usage();
+                if ((subopts = cmdline.checkOption("-help", args, i, 0)) != null ||
+                     (subopts = cmdline.checkOption("-h", args, i, 0)) != null) {
+                    (new Usage()).usage();
                     System.exit(0);
                 }
-                else if ((subopts = checkOption("-out", args, i, 1)) != null) {
+                else if ((subopts = cmdline.checkOption("-out", args, i, 1)) != null) {
                     outfile = subopts[0];
                     i++;
                 }
-                else if ((subopts = checkOption("-sign", args, i, 1)) != null) {
+                else if ((subopts = cmdline.checkOption("-sign", args, i, 1)) != null) {
                     signingFile = subopts[0];
                     i++;
                 }
-                else if ((subopts = checkOption("-ck", args, i, 0)) != null) {
+                else if ((subopts = cmdline.checkOption("-ck", args, i, 0)) != null) {
                     clearkey = true;
                 }
-                else if ((subopts = checkOption("-roll", args, i, 3)) != null) {
+                else if ((subopts = cmdline.checkOption("-roll", args, i, 3)) != null) {
                     rollingKeyStart = Integer.parseInt(subopts[0]);
                     rollingKeyCount = Integer.parseInt(subopts[1]);
                     rollingKeySamples = Integer.parseInt(subopts[2]);
                     i++;
                 }
-                else if ((subopts = checkOption("-cp", args, i, 0)) != null) {
+                else if ((subopts = cmdline.checkOption("-cp", args, i, 0)) != null) {
                     printCP = true;
                 }
                 else {
-                    errorExit("Illegal argument: " + args[i]);
+                    cmdline.errorExit("Illegal argument: " + args[i]);
                 }
                 
                 continue;
@@ -211,7 +179,7 @@ public class CryptfileGen {
             // Parse tracks
             String track_desc[] = args[i].split(":");
             if (track_desc.length != 2) {
-                errorExit("Illegal track specification: " + args[i]);
+                cmdline.errorExit("Illegal track specification: " + args[i]);
             }
             try {
                 Track t = new Track();
@@ -221,12 +189,12 @@ public class CryptfileGen {
                 track_args[t.type.ordinal()] = t;
             }
             catch (IllegalArgumentException e) {
-                errorExit("Illegal track_type -- " + track_desc[1]);
+                cmdline.errorExit("Illegal track_type -- " + track_desc[1]);
             }
         }
         
         if (content_id_str == null) {
-            errorExit("Must specify content_id string!");
+            cmdline.errorExit("Must specify content_id string!");
         }
         
         // Request keys
@@ -236,7 +204,7 @@ public class CryptfileGen {
                 trackList.add(t);
         }
         if (trackList.isEmpty()) {
-            errorExit("Must specify at least one track!");
+            cmdline.errorExit("Must specify at least one track!");
         }
         
         KeyRequest request = (rollingKeyCount != -1 && rollingKeyStart != -1) ?
@@ -279,7 +247,7 @@ public class CryptfileGen {
                     wvPSSH = WidevinePSSHProtoBuf.WidevineCencHeader.parseFrom(Base64.decodeBase64(pssh.data));
                 }
                 catch (InvalidProtocolBufferException e) {
-                    errorExit("Could not parse PSSH protobuf from key response message");
+                    cmdline.errorExit("Could not parse PSSH protobuf from key response message");
                 }
                 psshList.add(new WidevinePSSH(wvPSSH));
             }
@@ -344,7 +312,7 @@ public class CryptfileGen {
             }
         }
         catch (FileNotFoundException e) {
-            errorExit("Could not open output file (" + outfile + ") for writing");
+            cmdline.errorExit("Could not open output file (" + outfile + ") for writing");
         }
         
     }
