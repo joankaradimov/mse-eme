@@ -28,6 +28,7 @@ package org.cablelabs.cryptfile;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.util.Random;
 
 import org.apache.commons.codec.DecoderException;
 import org.apache.commons.codec.binary.Hex;
@@ -129,6 +130,20 @@ public class KeyPair {
         if (key.length != AES_128_KEYSIZE)
             throw new IllegalArgumentException("Invalid AES-128 key size: " + key.length);
         this.key = key;
+    }
+    
+    /**
+     * Creates a new key pair from a randomly generated key ID and key
+     * 
+     * @return a random key pair
+     */
+    public static KeyPair random() {
+        Random r = new Random();
+        byte[] key = new byte[16];
+        r.nextBytes(key);
+        byte[] keyID = new byte[16];
+        r.nextBytes(keyID);
+        return new KeyPair(keyID, key);
     }
     
     /**
