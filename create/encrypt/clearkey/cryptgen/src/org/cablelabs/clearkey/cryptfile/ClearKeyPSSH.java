@@ -46,6 +46,16 @@ public class ClearKeyPSSH extends DRMInfoPSSH {
         (byte)0x52, (byte)0xe2, (byte)0xfb, (byte)0x4b
     };
     
+    /**
+     * Returns whether or not the given systemID is ClearKey
+     * 
+     * @param systemID the systemID to check
+     * @return true if the systemID is ClearKey, false otherwise
+     */
+    public static boolean isClearKey(byte[] systemID) {
+        return systemIDMatch(CLEARKEY_SYSTEM_ID, systemID);
+    }
+    
     // Must be PSSH version 1 
     public ClearKeyPSSH(byte[][] keyIDs) {
         super(CLEARKEY_SYSTEM_ID, 1, keyIDs);

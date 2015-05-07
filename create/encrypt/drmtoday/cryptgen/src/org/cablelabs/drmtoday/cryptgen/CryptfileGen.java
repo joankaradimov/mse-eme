@@ -1,4 +1,4 @@
-/* Copyright (c) 2014, CableLabs, Inc.
+/* Copyright (c) 2015, CableLabs, Inc.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -26,13 +26,11 @@
 
 package org.cablelabs.drmtoday.cryptgen;
 
-import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Properties;
 
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.codec.binary.Hex;
@@ -43,7 +41,14 @@ import org.cablelabs.cryptfile.CryptTrack;
 import org.cablelabs.cryptfile.CryptfileBuilder;
 import org.cablelabs.cryptfile.DRMInfoPSSH;
 import org.cablelabs.cryptfile.KeyPair;
-import org.w3c.dom.DOMException;
+import org.cablelabs.drmtoday.AuthAPI;
+import org.cablelabs.drmtoday.CencKey;
+import org.cablelabs.drmtoday.CencKeyAPI;
+import org.cablelabs.drmtoday.PropsFile;
+import org.cablelabs.drmtoday.PsshData;
+import org.cablelabs.drmtoday.cryptfile.DRMTodayPSSH;
+import org.cablelabs.playready.cryptfile.PlayReadyPSSH;
+import org.cablelabs.widevine.cryptfile.WidevinePSSH;
 import org.w3c.dom.Document;
 
 /**
@@ -59,7 +64,7 @@ import org.w3c.dom.Document;
  * The 
  */
 public class CryptfileGen {
-
+    
     private static class Usage implements org.cablelabs.cmdline.Usage {
         public void usage() {
             System.out.println("DRMToday MP4Box cryptfile generation tool.");
@@ -70,7 +75,10 @@ public class CryptfileGen {
             System.out.println("\t\tDRMToday properties file that contains merchant login info.  <drmtoday_props_file>");
             System.out.println("\t\tis a Java properties file with the following properties:");
             System.out.println("\t\t\tmerchant: Your assigned merchant ID");
-            System.out.println("\t\t\tpassword: Your merchant password");
+            System.out.println("\t\t\tusername: Your DRMToday frontend username");
+            System.out.println("\t\t\tpassword: Your DRMToday frontend password");
+            System.out.println("\t\t\tauthHost: Host to use for DRMToday CAS operations");
+            System.out.println("\t\t\tfeHost: Host to use for DRMToday frontend operations");
             System.out.println("");
             System.out.println("\t<assetId> The DRMToday assetId");
             System.out.println("");
@@ -126,7 +134,7 @@ public class CryptfileGen {
         Track[] track_args = new Track[StreamType.NUM_TYPES.ordinal()];
         
         // DRMToday login properties file
-        String loginPropsFile = null;
+        String dtPropsFile = null;
         
         String assetId = null;
         String variantId = null;
@@ -180,8 +188,8 @@ public class CryptfileGen {
             }
             
             // Get login properties file
-            if (loginPropsFile == null) {
-                loginPropsFile = args[i];
+            if (dtPropsFile == null) {
+                dtPropsFile = args[i];
                 continue;
             }
             
@@ -209,7 +217,7 @@ public class CryptfileGen {
             }
         }
         
-        if (loginPropsFile == null) {
+        if (dtPropsFile == null) {
             cmdline.errorExit("Must specify login props file!");
         }
         
@@ -233,67 +241,60 @@ public class CryptfileGen {
             cmdline.errorExit("Must specify at least one track!");
         }
         
-        // Login
-        String ticket;
-        String merchant;
-        String password;
+        // Load properties file
+        PropsFile props = null;
         try {
-            
+            props = new PropsFile(dtPropsFile);
         } catch (Exception e) {
-            cmdline.errorExit(e.getMessage());
+            cmdline.errorExit("Error loading DRMToday properties file! -- " + e.getMessage());
         }
         
-        KeyRequest request = (rollingKeyCount != -1 && rollingKeyStart != -1) ?
-            new KeyRequest(content_id_str, trackList, rollingKeyStart, rollingKeyCount) :
-            new KeyRequest(content_id_str, trackList);
-        if (signingFile != null) {
-            try {
-                request.setSigningProperties(signingFile);
-            }
-            catch (Exception e) {
-                System.err.println("Error in signing file: " + e.getMessage());
-                System.exit(1);
-            }
+        // Must use one non-ClearKey DRM
+        if (!widevine && !playready) {
+            cmdline.errorExit("Must specify at least one non-ClearKey DRM!");
         }
-        ResponseMessage m = request.requestKeys();
-        if (m.status != ResponseMessage.StatusCode.OK) {
-            System.err.println("Received error from key server! Code = " + m.status.toString());
-            System.exit(1);
+        
+        // Login and get ticket for key ingest API
+        AuthAPI drmtodayAuth = new AuthAPI(props.getUsername(), props.getPassword(), props.getAuthHost());
+        try {
+            drmtodayAuth.login();
+            
+        } catch (Exception e) {
+            cmdline.errorExit("Error during DRMToday CAS process! -- " + e.getMessage());
         }
-    
-        // The Widevine key server provides the PSSH data directly to us.  Optionally, we could
-        // build our own WidevineCencHeader protobuf object from the information in the response.
-        // For rolling keys it might be a better solution to build our own, since the widevine server
-        // currently sends a new PSSH for every key in every track.  Building our own, we could keep
-        // a single PSSH per track
         
         List<DRMInfoPSSH> psshList = new ArrayList<DRMInfoPSSH>();
         List<CryptTrack> cryptTracks = new ArrayList<CryptTrack>();
         
-        // Build PSSH's (has to be one for each track in the Widevine world)
-        for (ResponseMessage.Track track : m.tracks) {
-            for (ResponseMessage.Track.PSSH pssh : track.pssh) {
-                
-                // Only widevine DRM for now
-                if (!pssh.drm_type.equalsIgnoreCase("widevine"))
-                    continue;
-                
-                WidevinePSSHProtoBuf.WidevineCencHeader wvPSSH = null;
-                try {
-                    wvPSSH = WidevinePSSHProtoBuf.WidevineCencHeader.parseFrom(Base64.decodeBase64(pssh.data));
+        // Ingest key for each track
+        CencKey cencKey = new CencKey();
+        cencKey.assetId = assetId;
+        if (variantId != null) {
+            cencKey.variantId = variantId;
+        }
+        CencKeyAPI cencKeyAPI = new CencKeyAPI(drmtodayAuth, props.getFeHost(), props.getMerchant());
+        for (Track t : trackList) {
+            cencKey.key = Base64.encodeBase64String(t.keypair.getKey());
+            cencKey.keyId = Base64.encodeBase64String(t.keypair.getID());
+            cencKey.streamType = t.streamType.toString();
+            try {
+                String resp = cencKeyAPI.ingestKey(cencKey);
+                List<PsshData> psshdata = PsshData.parseFromDrmTodayJson(resp);
+                for (PsshData d : psshdata) {
+                    if ((WidevinePSSH.isWidevine(d.getSystemID()) && widevine) || 
+                        (PlayReadyPSSH.isPlayReady(d.getSystemID()) && playready)) {
+                        psshList.add(new DRMTodayPSSH(d));
+                    }
                 }
-                catch (InvalidProtocolBufferException e) {
-                    errorExit("Could not parse PSSH protobuf from key response message");
-                }
-                psshList.add(new WidevinePSSH(wvPSSH));
             }
-                
-            // Get the keys for this track and add to our cryptfile
+            catch (Exception e) {
+                // TODO Auto-generated catch block
+                System.out.println("Error during Cenc key ingest! -- " + e.getMessage());
+            }
+            
             List<CryptKey> keyList = new ArrayList<CryptKey>();
-            keyList.add(new CryptKey(new KeyPair(Base64.decodeBase64(track.key_id),
-                                                 Base64.decodeBase64(track.key))));
-            cryptTracks.add(new CryptTrack(track_args[track.type.ordinal()].id, 8, null,
-                                           keyList, rollingKeySamples));
+            keyList.add(new CryptKey(t.keypair));
+            cryptTracks.add(new CryptTrack(t.id, 8, null, keyList, 0));
         }
         
         // Add clearkey PSSH if requested

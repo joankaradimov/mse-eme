@@ -54,6 +54,22 @@ public abstract class DRMInfoPSSH implements MP4BoxXML {
     
     protected byte[] systemID; 
     
+    /**
+     * Determines if two system IDs are a match
+     * 
+     * @param id1 systemID 1
+     * @param id2 systemID 2
+     * @return true if the two system IDs are the same length and are a match,
+     * false otherwise
+     */
+    protected static boolean systemIDMatch(byte[] id1, byte[] id2) {
+        if (id1.length != id2.length)
+            return false;
+        for (int i = 0; i < id1.length; i++)
+            if (id1[i] != id2[i])
+                return false;
+        return true;
+    }
     
     /**
      * Construct a new DRMInfo element (PSSH version 0)

@@ -8,5 +8,8 @@
 	<classpathentry kind="lib" path="lib/httpcomponents-client-4.4.1/lib/httpclient-4.4.1.jar"/>
 	<classpathentry kind="lib" path="lib/httpcomponents-client-4.4.1/lib/httpcore-4.4.1.jar"/>
 	<classpathentry kind="lib" path="/CryptfileBuilder/lib/commons-codec/commons-codec-1.9.jar"/>
+	<classpathentry kind="lib" path="/CryptfileBuilder/lib/google-gson-2.2.4/gson-2.2.4.jar"/>
+	<classpathentry combineaccessrules="false" kind="src" path="/PlayReadyCryptfileGen"/>
+	<classpathentry combineaccessrules="false" kind="src" path="/WidevineCryptfileGen"/>
 	<classpathentry kind="output" path="eclipsebin"/>
 </classpath>

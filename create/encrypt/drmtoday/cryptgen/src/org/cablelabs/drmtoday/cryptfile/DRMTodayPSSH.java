@@ -1,4 +1,4 @@
-/* Copyright (c) 2014, CableLabs, Inc.
+/* Copyright (c) 2015, CableLabs, Inc.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -24,53 +24,32 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-package org.cablelabs.widevine.cryptfile;
+package org.cablelabs.drmtoday.cryptfile;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
 
 import org.cablelabs.cryptfile.Bitstream;
 import org.cablelabs.cryptfile.DRMInfoPSSH;
-import org.cablelabs.widevine.proto.WidevinePSSHProtoBuf;
+import org.cablelabs.drmtoday.PsshData;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 
-/**
- * Generates Widevine-specific PSSH for MP4Box cryptfiles
- */
-public class WidevinePSSH extends DRMInfoPSSH {
+public class DRMTodayPSSH extends DRMInfoPSSH {
     
-    
-    private static final byte[] WIDEVINE_SYSTEM_ID = {
-        (byte)0xed, (byte)0xef, (byte)0x8b, (byte)0xa9,
-        (byte)0x79, (byte)0xd6, (byte)0x4a, (byte)0xce,
-        (byte)0xa3, (byte)0xc8, (byte)0x27, (byte)0xdc,
-        (byte)0xd5, (byte)0x1d, (byte)0x21, (byte)0xed
-    };
-    
-    private WidevinePSSHProtoBuf.WidevineCencHeader psshProto;
+    private PsshData data;
     
     /**
-     * Returns whether or not the given systemID is Widevine
+     * Create DRMToday PSSH
      * 
-     * @param systemID the systemID to check
-     * @return true if the systemID is Widevine, false otherwise
+     * @param data
      */
-    public static boolean isWidevine(byte[] systemID) {
-        return systemIDMatch(WIDEVINE_SYSTEM_ID, systemID);
+    public DRMTodayPSSH(PsshData data) {
+        super(data.getSystemID());
+        this.data = data;
     }
     
-    /**
-     * Create a new Widevine PSSH
-     * 
-     * @param psshProto
-     */
-    public WidevinePSSH(WidevinePSSHProtoBuf.WidevineCencHeader psshProto) {
-        super(WIDEVINE_SYSTEM_ID);
-        this.psshProto = psshProto;
-    }
-
     @Override
     public Element generateContentProtection(Document d) throws IOException {
         Element e = super.generateContentProtection(d);
@@ -88,11 +67,10 @@ public class WidevinePSSH extends DRMInfoPSSH {
      */
     @Override
     protected void generatePSSHData(DataOutputStream dos) throws IOException {
-        byte[] protoBytes = psshProto.toByteArray();
-        dos.writeInt(protoBytes.length);
-        dos.write(protoBytes);
+        dos.writeInt(data.getData().length);
+        dos.write(data.getData());
     }
-
+    
     /*
      * (non-Javadoc)
      * @see org.cablelabs.cryptfile.MP4BoxXML#generateXML(org.w3c.dom.Document)
@@ -101,7 +79,7 @@ public class WidevinePSSH extends DRMInfoPSSH {
     public Node generateXML(Document d) {
         Element e = generateDRMInfo(d);
         Bitstream b = new Bitstream();
-        b.setupDataB64(psshProto.toByteArray());
+        b.setupDataB64(data.getData());
         e.appendChild(b.generateXML(d));
         return e;
     }

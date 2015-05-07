@@ -59,6 +59,16 @@ public class PlayReadyPSSH extends DRMInfoPSSH {
     private int wrmHeadersSize = 0;
     private int proSize;
 
+    /**
+     * Returns whether or not the given systemID is PlayReady
+     * 
+     * @param systemID the systemID to check
+     * @return true if the systemID is PlayReady, false otherwise
+     */
+    public static boolean isPlayReady(byte[] systemID) {
+        return systemIDMatch(PLAYREADY_SYSTEM_ID, systemID);
+    }
+    
     public PlayReadyPSSH(List<WRMHeader> wrmHeaders) {
         super(PLAYREADY_SYSTEM_ID);
         this.wrmHeaders = wrmHeaders;
