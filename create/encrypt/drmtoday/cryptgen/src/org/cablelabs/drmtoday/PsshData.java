@@ -30,13 +30,12 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.commons.codec.binary.Base64;
 import org.cablelabs.cryptfile.KeyPair;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
-import com.sun.org.apache.xml.internal.security.exceptions.Base64DecodingException;
-import com.sun.org.apache.xml.internal.security.utils.Base64;
 
 public class PsshData {
     
@@ -50,9 +49,8 @@ public class PsshData {
      * 
      * @param json the DRMToday returned json object
      * @return list of pssh data
-     * @throws Base64DecodingException 
      */
-    public static List<PsshData> parseFromDrmTodayJson(String json) throws Base64DecodingException {
+    public static List<PsshData> parseFromDrmTodayJson(String json) {
         ArrayList<PsshData> retVal = new ArrayList<PsshData>();
         
         JsonParser parser = new JsonParser();
@@ -65,7 +63,7 @@ public class PsshData {
                 if (system.getKey().equals("name")) {
                     systemName = system.getValue().getAsString();
                 } else if (system.getKey().equals("psshBoxContent")) {
-                    psshData = Base64.decode(system.getValue().getAsString());
+                    psshData = Base64.decodeBase64(system.getValue().getAsString());
                 }
             }
             retVal.add(new PsshData(systemName, systemID, psshData));
