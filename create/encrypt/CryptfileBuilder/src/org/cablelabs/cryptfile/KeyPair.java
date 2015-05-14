@@ -28,6 +28,7 @@ package org.cablelabs.cryptfile;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Random;
 
 import org.apache.commons.codec.DecoderException;
@@ -180,6 +181,16 @@ public class KeyPair {
     public KeyPair(byte[] keyID, byte[] key) {
         this(key);
         this.keyID = keyID;
+    }
+    
+    /**
+     * Copy constructor.  
+     * 
+     * @param copy the key to copy
+     */
+    public KeyPair(KeyPair copy) {
+        this.key = Arrays.copyOf(copy.key, copy.key.length);
+        this.keyID = Arrays.copyOf(copy.keyID, copy.keyID.length);
     }
     
     /**

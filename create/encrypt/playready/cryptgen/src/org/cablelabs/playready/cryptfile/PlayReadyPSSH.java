@@ -58,6 +58,11 @@ public class PlayReadyPSSH extends DRMInfoPSSH {
     private List<WRMHeader> wrmHeaders;
     private int wrmHeadersSize = 0;
     private int proSize;
+    
+    /**
+     * License server URL to use for testing
+     */
+    public static final String TEST_URL = "http://playready.directtaps.net/pr/svc/rightsmanager.asmx?PlayRight=1&UseSimpleNonPersistentLicense=1";
 
     /**
      * Returns whether or not the given systemID is PlayReady

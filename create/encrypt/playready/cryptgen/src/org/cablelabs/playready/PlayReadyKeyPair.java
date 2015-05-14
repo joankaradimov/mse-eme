@@ -167,19 +167,22 @@ public class PlayReadyKeyPair extends KeyPair {
         return checksum;
     }
     
+    private void prepareKeyIDAndChecksum() {
+        this.mskeyID = binaryEncodeMSGUID(this.keyID);
+        this.checksum = generateChecksum(mskeyID, key);
+    }
+    
     /**
      * Create a key from pre-existing key data
      * 
      * @param keyID the key ID GUID in xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx format
      * @param key the 16-byte key value
-     * @param checksum the 8-byte checksum
      * @param keySeed the key seed used to generate the key (can be null)
      */
-    public PlayReadyKeyPair(String keyID, byte[] key, byte[] checksum, byte[] keySeed) {
+    public PlayReadyKeyPair(String keyID, byte[] key, byte[] keySeed) {
         super(keyID, key);
-        this.mskeyID = binaryEncodeMSGUID(this.keyID);
-        this.checksum = generateChecksum(mskeyID, key);
         this.keySeed = keySeed;
+        prepareKeyIDAndChecksum();
     }
 
     /**
@@ -193,10 +196,9 @@ public class PlayReadyKeyPair extends KeyPair {
     public PlayReadyKeyPair(String keyID, byte[] keySeed) {
         super();
         this.keyID = parseGUID(keyID);
-        this.mskeyID = binaryEncodeMSGUID(this.keyID);
         this.key = generateKey(this.mskeyID, keySeed);
-        this.checksum = generateChecksum(mskeyID, key);
         this.keySeed = keySeed;
+        prepareKeyIDAndChecksum();
     }
     
     /**
@@ -211,9 +213,19 @@ public class PlayReadyKeyPair extends KeyPair {
     public PlayReadyKeyPair(String keyID) {
         super();
         this.keyID = parseGUID(keyID);
-        this.mskeyID = binaryEncodeMSGUID(this.keyID);
         this.key = generateKey(this.mskeyID, keySeed);
-        this.checksum = generateChecksum(mskeyID, key);
+        prepareKeyIDAndChecksum();
+    }
+    
+    /**
+     * Create a PlayReady key from a custom key pair
+     * 
+     * @param kp the key pair
+     */
+    public PlayReadyKeyPair(KeyPair kp) {
+        super(kp);
+        keySeed = null;
+        prepareKeyIDAndChecksum();
     }
 
     /**

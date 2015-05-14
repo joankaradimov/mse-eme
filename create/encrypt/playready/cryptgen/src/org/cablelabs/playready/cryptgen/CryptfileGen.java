@@ -108,7 +108,7 @@ public class CryptfileGen {
         int rollingKeySamples = -1;
         
         String outfile = null;
-        String url = "http://playready.directtaps.net/pr/svc/rightsmanager.asmx?PlayRight=1&UseSimpleNonPersistentLicense=1";
+        String url = PlayReadyPSSH.TEST_URL;
         List<Track> tracks = new ArrayList<Track>();
         WRMHeader.Version headerVersion = WRMHeader.Version.V_4000;
         
