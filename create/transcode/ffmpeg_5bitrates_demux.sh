@@ -25,8 +25,9 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
-ffmpeg=/home/grutz/Projects/CableLabs/ffmpeg/ffmpeg
-ffprobe=/home/grutz/Projects/CableLabs/ffmpeg/ffprobe
+# Override paths to FFMPEG tools here
+ffmpeg=ffmpeg
+ffprobe=ffprobe
 
 function usage {
   echo ""

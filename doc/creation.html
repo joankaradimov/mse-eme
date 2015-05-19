@@ -107,54 +107,109 @@
           <h2 id="transcoding">Media Transcoding/Transrating</h2>
           <p>The first step in creating DASH content is to transcode your high-quality source content to AVC/H.264 video and AAC audio in various resolutions and bitrates.</p>
 
-          <h3 id="libav">libAV</h3>
-          <p>For open-source offerings, we chose <a href="http://www.libav.org">libAV</a> for transcoding and transrating.  libAV is a fork of the <a href="http://www.ffmpeg.org">ffmpeg</a> project and still maintains some compatibility with ffmpeg as far as command-line structure and usage is concerned. Therefore, it may be possible to take these instructions and use them with ffmpeg instead.  All build instructions below have been tested on Ubuntu 13.10 but may work on any Debian-based Linux distribution.</p>
+          <h3 id="ffmpeg">FFMpeg</h3>
+          <p>From open-source offerings, we chose <a href="http://www.ffmpeg.org">FFMpeg</a> for transcoding and transrating.  You may also alse have used libAV <a href="http://www.libav.org">ffmpeg</a> , which is a fork of the project and still maintains some compatibility with ffmpeg as far as command-line structure and usage is concerned. Therefore, it may be possible to take some of these instructions and use them with libAV instead.  All build instructions below have been tested on Ubuntu 13.10 but may work on any Debian-based Linux distribution.</p>
 
           <p>First install the basic components for git and software compilation.</p>
           <pre><code class="language-bash">$ sudo apt-get install essential-build git yasm</code></pre>
 
-          <p>For transcoding video to H.264 and AAC-LC you will need to build libav from source, with those components enabled.  First you must install the development libraries for libx264 and libfdk-aac.</p>
+          <p>For transcoding video to H.264 and AAC-LC you will need to build ffmpeg from source, with those components enabled.  First you must install the development libraries for libx264 and libfdk-aac.</p>
           <pre><code class="language-bash">$ sudo apt-get install libx264-dev libfdk-aac-dev</code></pre>
 
-          <p>Then get the libav sources from git. Configure, build, and install.</p>
-          <pre><code class="language-bash">$ git clone git://git.libav.org/libav.git
+          <p>Then get the ffmpeg sources from git. Configure, build, and install.</p>
+          <pre><code class="language-bash">$ git clone git://git.ffmpeg.org/ffmpeg.git
 $ cd libav
 $ ./configure --enable-nonfree --enable-gpl --enable-libx264 --enable-libfdk-aac
 $ make
 $ sudo make install</code></pre>
 
-          <p>Once you have libav built, you have a wide variety of choices for generating your adaptive bitrate streams. You must run <span class="code">avconv</span> once for each adaptive profile.  Below is an example that will generate 2 adaptive streams (AVC High @ L3.1) at 2Mb/s and 3Mb/s:</p>
-          <pre><code class="language-bash">$ avconv -i input_720p.mov
+          <p>Once you have ffmpeg built, you have a wide variety of choices for generating your adaptive bitrate streams. You must run <span class="code">ffmpeg</span> once for each adaptive profile.  Below is an example that will generate 2 adaptive streams (AVC High @ L3.1) at 2Mb/s and 3Mb/s:</p>
+          <pre><code class="language-bash">$ ffmpeg -i input_720p.mov
           -codec:v libx264 -profile:v high -level 31 -b:v 2000k
           -codec:a libfdk_aac -profile:a aac_low
           abr_720p_h264-2Mb-high-3.1_aac-lc.mp4
-$ avconv -i input720p.mov
+$ ffmpeg -i input720p.mov
           -codec:v libx264 -profile:v high -level 31 -b:v 3000k
           -codec:a libfdk_aac -profile:a aac_low
           abr_720p_h264-3Mb-high-3.1_aac-lc.mp4</code></pre>
-
           <p>Here is a more complex example that produces 5 adaptive profiles with varying bitrates, H.264 profiles and levels, and scaled resolutions (all with 1 audio bitrate transcoded to AAC-LC):</p>
-          <pre><code class="language-bash">$ avconv -i input_1080p.mov -vf "scale=w=512:h=288"
+          <pre><code class="language-bash">$ ffmpeg -i input_1080p.mov -vf "scale=w=512:h=288"
           -codec:v libx264 -profile:v main -level 21 -b:v 360k
           -codec:a libfdk_aac -profile:a aac_low
           abr_512x288_h264-360Kb_aac-lc.mp4
-$ avconv -i input_1080p.mov -vf "scale=w=704:h=396"
+$ ffmpeg -i input_1080p.mov -vf "scale=w=704:h=396"
           -codec:v libx264 -profile:v main -level 30 -b:v 620k
           -codec:a libfdk_aac -profile:a aac_low
           abr_704x396_h264-620Kb_aac-lc.mp4
-$ avconv -i input_1080p -vf "scale=w=896:h=504"
+$ ffmpeg -i input_1080p -vf "scale=w=896:h=504"
           -codec:v libx264 -profile:v high -level 31 -b:v 1340k
           -codec:a libfdk_aac -profile:a aac_low
           abr_896x504_h264-1340Kb_aac-lc.mp4
-$ avconv -i input_1080p.mov -vf "scale=w=1280:h=720"
+$ ffmpeg -i input_1080p.mov -vf "scale=w=1280:h=720"
           -codec:v libx264 -profile:v high -level 32 -b:v 2500k
           -codec:a libfdk_aac -profile:a aac_low
           abr_1280x720_h264-2500Kb_aac-lc.mp4
-$ avconv -i input_1080p.mov -vf "scale=w=1920:h=1080"
+$ ffmpeg -i input_1080p.mov -vf "scale=w=1920:h=1080"
           -codec:v libx264 -profile:v high -level 40 -b:v 4500k
           -codec:a libfdk_aac -profile:a aac_low
           abr_1920x1080_h264-4500Kb_aac-lc.mp4</code></pre>
+          <p>While the previous ffmpeg examples produce multi-bitrate files which could be suitable for some uses, our goal is to create content suitable for the DASH-AVC/264 interoperability points provided by the DASH-IF.  These guidelines require a couple of things.  First, audio and video data may not be multiplexed into a single stream.  Second, each DASH segment may vary from its expected duration by no more than 50%, so we need to ensure that our segmenter will find sufficient I-Frames to support this. The following script (<a href="">located in GitHub)</a> will produce streams that meet all of our requirements.</p>
+          <pre><code class="scrollable-code language-bash"># Override paths to FFMPEG tools here
+ffmpeg=ffmpeg
+ffprobe=ffprobe
 
+function usage {
+  echo ""
+  echo "Transcode/Transrate Script"
+  echo "usage:"
+  echo "   video_scaled_demux_5bitrates <input_file> <output_dir>"
+}
+
+if [ -z $1 ]; then
+  echo "Must provide input media file"
+  usage
+  exit 1
+fi
+if [ -z $2 ]; then
+  echo "Must provide output directory for transcoded/transrated files"
+  usage
+  exit 1
+fi
+
+mkdir -p $2
+
+framerate=$((`./ffprobe $1 -select_streams v -show_entries stream=avg_frame_rate -v quiet -of csv="p=0"`))
+
+function transcode_video {
+  vbitrate=$1
+  res=$2
+  profile=$3
+  level=$4
+  outdir=$5
+  infile=$6
+  outfile=video_`echo $res | sed 's/:/x/'`_h264-${vbitrate}.mp4
+
+  $ffmpeg -i $infile -s $res -map_chapters -1 -maxrate $vbitrate -minrate $vbitrate -bufsize $vbitrate -an -codec:v libx264 -profile:v $profile -level $level -b:v $vbitrate -x264opts "keyint=$framerate:min-keyint=$framerate:no-scenecut" $outdir/$outfile
+}
+
+function transcode_audio {
+  abitrate=$1
+  outdir=$2
+  infile=$3
+  outfile=audio_aac-lc_${abitrate}.mp4
+
+  $ffmpeg -i $infile -map_chapters -1 -vn -codec:a libfdk_aac -profile:a aac_low -b:a $abitrate $outdir/$outfile
+}
+
+transcode_video "360k" "512:288" "main" 30 $2 $1
+transcode_video "620k" "704:396" "main" 30 $2 $1
+transcode_video "1340k" "896:504" "high" 31 $2 $1
+transcode_video "2500k" "1280:720" "high" 32 $2 $1
+transcode_video "4500k" "1920:1080" "high" 40 $2 $1
+
+transcode_audio "128k" $2 $1
+transcode_audio "192k" $2 $1</code></pre>
+          <p>This script makes separate calls to <span class="code">ffmpeg</span> for each bitrate and for each audio or video component which provides the demultiplexed output we require.  Additionally, the script ensures that I-frames are spaced evenly apart at 1 second intervals.  The <span class="code">ffprobe</span> ffmpeg utility is used to detect the framerate of the source media after which the <span class="code">keyint</span> and <span class="code">min-keyint</span> x264 arguments dictate the keyframe interval.  The <span class="code">noscenecut</span> argument ensures that ffmpeg does not insert arbitrary I-frames when it detects a visual scene change in the source content.</p>
           <h2 id="encryption">Encryption</h2>
           <p>All of the examples in this documentation will use the ISO Common Encryption standard for ISO BMFF files (ISO 23009-7). The Common Encryption specification defines a single set of encryption parameters for all content to make the decryption process more simple and consistent across players.  The following restrictions are enforced:</p>
           <ul>
@@ -163,7 +218,7 @@ $ avconv -i input_1080p.mov -vf "scale=w=1920:h=1080"
             <li>64-bit or 128-bit Initialization Vectors</li>
             <li>128-bit Key IDs</li>
           </ul>
-          <p>In addition to the required encryption standards, the specification defines several new boxes that describe how encrypted content is to be represented in ISO BMFF containers.  These new boxes indicate which tracks within the media have encrypted samples and which samples within that track are actually encrypted.  Each set of encrypted samples is assoicated with a encryption key ID.  It is possible to have alternating sequences of encrypted and unencrypted samples.  It is also possible to have multiple encryption key IDs associated with various samples throughout the media.  However, each contiguous set of encrypted samples may only be encrypted by a single key ID.</p>
+          <p>In addition to the required encryption standards, the specification defines several new boxes that describe how encrypted content is to be represented in ISO BMFF containers.  These new boxes indicate which tracks within the media have encrypted samples and which samples within that track are actually encrypted.  Each set of encrypted samples is assoicated with an encryption key ID.  It is possible to have alternating sequences of encrypted and unencrypted samples.  It is also possible to have multiple encryption key IDs associated with various samples throughout the media.  However, each contiguous set of encrypted samples may only be encrypted by a single key ID.</p>
           <p>The box that contains DRM-specific information is called the 'pssh' (Protection System Specific Header).  This box contains all the information the CDM and/or player application will need to retrieve decryption keys from the DRM-specific license server.  The following sections desribe how to use our tools to encrypt the content and build and insert one or more DRM-specific 'pssh' boxes.</p>
 
           <p>To encrypt our ABR content, we use the open-source <a href="http://gpac.wp.mines-telecom.fr/mp4box/">MP4Box</a> tool from the <a href="http://gpac.wp.mines-telecom.fr/">GPAC</a> project (maintained by <a href="http://www.telecom-paristech.fr/">Telecom ParisTech</a>).  Please note that it is possible to do some forms of non-CommonEncryption using the MP4Box tool, but it will not be covered in this documentation.  We have added features and fixed many bugs in MP4Box over the course of our development, so we recommend that you download one of the <a href="http://gpac.wp.mines-telecom.fr/downloads/gpac-nightly-builds/">nightly builds</a> or build it from <a href="http://sourceforge.net/svn/?group_id=84101">source</a>.</p>
@@ -195,7 +250,7 @@ OPTIONS
 
           <h3>CryptfileBuilder</h3>
 
-          <p>CableLabs has developed a set of tools to assist in the generation of <em>cryptfiles</em>.  A cryptfile is the primary input to MP4Box that describes exactly how the content should be encrypted.  A cryptfile also specifies the contents of any 'pssh' boxes to be inserted into the encrypted content.  One of the CableLabs tools, CryptfileBuilder, is a Java library on top of which you can develop your own DRM-specific cryptfile generator applications.  It defines the basic building blocks for MP4Box cryptfiles including bitstream (<span class="code">&lt;BS&gt;</span>), crypt track (<span class="code">&lt;CryptTrack&gt;</span>), and key (<span class="code">&lt;key&gt;</span>) elements.</p>
+          <p>CableLabs has developed a set of tools to assist in the generation of <em>MP4Box cryptfiles</em>.  A cryptfile is the primary input to MP4Box that describes exactly how the content should be encrypted.  A cryptfile also specifies the contents of any 'pssh' boxes to be inserted into the encrypted content.  One of the CableLabs tools, CryptfileBuilder, is a Java library on top of which you can develop your own DRM-specific cryptfile generator applications.  It defines the basic building blocks for MP4Box cryptfiles including bitstream (<span class="code">&lt;BS&gt;</span>), crypt track (<span class="code">&lt;CryptTrack&gt;</span>), and key (<span class="code">&lt;key&gt;</span>) elements.</p>
 
           <p>A top-level <a href="http://ant.apache.org/">Ant</a> build script is provided to build all of the current cryptfile generators.  The build script is located in <span class="code">create/encrypt</span> subfolder of the source repository.  You must have Ant and Java installed on your system and available in your executable PATH.</p>
 
@@ -290,7 +345,7 @@ Checksum =
           <p>The entire process of generating a PlayReady cryptfile has been rolled up into a single tool in <span class="code">playready/cryptgen</span>.  Check out the arguments and options you can pass to this tool:</p>
 
           <div class="well">
-            <pre><code class="scrollable-code">$ java -jar playready.jar -help
+            <pre><code class="scrollable-code">$ java -jar playready/cryptgen/playready.jar -h
 Microsoft PlayReady MP4Box cryptfile generation tool.
 
 usage:  CryptfileGen [OPTIONS] &lt;track_id&gt;:{@&lt;keyid_file&gt;|&lt;key_id&gt;[,&lt;key_id&gt;...]} [&lt;track_id&gt;:{@&lt;keyid_file&gt;|&lt;key_id&gt;[,&lt;key_id&gt;...]}]...
@@ -321,20 +376,22 @@ usage:  CryptfileGen [OPTIONS] &lt;track_id&gt;:{@&lt;keyid_file&gt;|&lt;key_id&
   -url &lt;license_url&gt;
     If present, specifies the license URL to embed in the WRMHeaders.  If not specified, will
     use the default url of:
-    'http://playready.directtaps.net/pr/svc/rightsmanager.asmx?PlayRight=1&UseSimpleNonPersistentLicense=1'
+    'http://playready.directtaps.net/pr/svc/rightsmanager.asmx?PlayRight=1&amp;UseSimpleNonPersistentLicense=1'
 
   -roll &lt;sample_count&gt;
     Used for rolling keys only.  &lt;sample_count&gt; is the number of consecutive samples to be
     encrypted with each key before moving to the next.
 
-  -ck_remote &lt;url&gt;
-    Add CableLabs 'Remote' ClearKey PSSH to the cryptfile.  &lt;url&gt; is the ClearKey server
-    URL.
+  -ck
+    Add ClearKey PSSH to the cryptfile.
 
-  -ck_json
-    Add CableLabs 'JSON' ClearKey PSSH to the cryptfile.
+  -cp
+    Print a DASH &lt;ContentProtection&gt; element that can be pasted into the MPD
+        CableLabs 'JSON' ClearKey PSSH to the cryptfile.
             </code></pre>
           </div>
+
+          <p>Notice that you can use CommonEncryption to add <a href="#clearkey">CableLabs ClearKey DRM</a> to the encryption process (-ck argument).  More on this later.  The tool will also display a ContentProtection element (-cp argument) that can be inserted into the MPD.  This element can be parsed by media players to pre-fetch DRM licenses prior to downloading media segments that contain the PSSH boxes.</p>
 
           <h3 id="primetime">Adobe PrimeTime</h3>
 
@@ -342,7 +399,32 @@ usage:  CryptfileGen [OPTIONS] &lt;track_id&gt;:{@&lt;keyid_file&gt;|&lt;key_id&
 
           <h3 id="widevine">Google Widevine</h3>
 
-          <p>The process for generating a Widevine cryptfile has been by our tool located in <span class="code">widevine/cryptgen</span>.  Here are the arguments and options you can pass to this tool:</p>
+          <p>Generating cryptfiles for Widevine DRM is also supported by the tools.  In order to use the tools, you must have contacted Google to setup your own Widevine portal.  After setting up the account, you will be given a provider name, signing key and initialization vector, and URLs for license creation and retrieval.  For encrypting content, the Widevine server will create key/keyID pairs based on a given contentID (String) and media type (HD, SD, or AUDIO).  The server will also return a PSSH box that can be placed in the media during the encyrption process.  The CableLabs cryptfile tool actually does not use this Widevine-generated PSSH and instead generates its own.  Mostly this was done since the PSSH format is public and we wanted to ensure that we could generate one ourselves.  Google uses its <a href="https://developers.google.com/protocol-buffers/">Protocol Buffer</a> to serialize the PSSH data into a compact format suitable for the PSSH.  The basic structure of the protobuf looks something like this:</p>
+
+          <div class="panel panel-success">
+            <div class="panel-body">
+              <pre><code>message WidevineCencHeader {
+  enum Algorithm {
+    UNENCRYPTED = 0;
+    AESCTR = 1;
+  };
+  optional Algorithm algorithm = 1;
+  repeated bytes key_id = 2;
+  // Content provider name.
+  optional string provider = 3;
+  // A content identifier, specified by content provider.
+  optional bytes content_id = 4;
+  // Track type. Acceptable values are SD, HD and AUDIO. Used to // differentiate content keys used by an asset.
+  optional string track_type = 5;
+  // The name of a registered policy to be used for this asset.
+  optional string policy = 6;
+  // Crypto period index, for media using key rotation.
+  optional uint32 crypto_period_index = 7;
+}</code></pre>
+            </div>
+          </div>
+
+          <p>The process for creating a Widevine cryptfile is supported in the utility located in <span class="code">widevine/cryptgen</span>.  Here are the arguments and options you can pass to this tool:</p>
 
           <div class="well">
             <pre><code class="scrollable-code">$ java -jar widevine.jar -help
@@ -387,50 +469,19 @@ usage:  CryptfileGen [OPTIONS] &lt;content_id&gt; &lt;track_id&gt;:&lt;track_typ
 
   -ck_json
     Add CableLabs 'JSON' ClearKey PSSH to the cryptfile.
+
+  -cp
+    Print a DASH &lt;ContentProtection&gt; element that can be pasted into the MPD
             </code></pre>
           </div>
 
-          Coming Soon
+          <p>Just as with PlayReady, you can use CommonEncryption to mix in ClearKey DRM.  Output of ContentProtection element is also supported.</p>
 
           <h3 id="clearkey">ClearKey</h3>
 
-          <p>The EME spec mandates browser support for a Simple Decryption system called <a href="https://dvcs.w3.org/hg/html-media/raw-file/default/encrypted-media/encrypted-media.html#simple-decryption-clear-key">Clear Key</a>.  The specification only provides the format of the decryption key data passed to the <span class="code">MediaKeySession.update()</span> EME API.  We wanted to develop a simple implementation that would show evidence of support (or lack of support) for Clear Key in browsers.  Additionally, our implementation creates a starting point for discussions regarding Clear Key integration with the Common Encryption standard.</p>
+          <p>The EME spec mandates browser support for a Simple Decryption system called <a href="https://dvcs.w3.org/hg/html-media/raw-file/default/encrypted-media/encrypted-media.html#simple-decryption-clear-key">ClearKey</a>. ClearKey is a "test" DRM in which keys are, at some point, exposed over the network or to Javascript applications.  The spec defines the ClearKey system string (org.w3.clearkey) and the format of decryption key data passed to the <span class="code">MediaKeySession.update()</span> API. We wanted to develop a simple implementation in our tools that would show evidence of support (or lack of support) for Clear Key in browsers.</p>
 
-          <h4>Common Encryption</h4>
-
-          <p>The primary task in getting Clear Key to work with Common encryption is to define the contents of the 'pssh' box in ISO BMFF files.  As shown in previous sections, each DRM vendor has developed their own data format for the 'pssh' that communicates the DRM-specific data that they believe to relevant and important.  In implementing our Clear Key solution, we wanted to cover two basic use-cases:</p>
-          <ol>
-            <li>Decryption key(s) is contained within the media itself.  In this case, keys may be transported over the network in the clear (assuming the media is carried over a network).</li>
-            <li>Decryption key(s) is retrieved from a remote server (similar to real DRMs).  Keys may be transported securely over the network (e.g. via HTTPS) and are only in the clear within the javascript code running on the browser.</li>
-          </ol>
-
-          <div class="panel panel-default">
-            <div class="panel-heading">
-              <h4 class="panel-title"><em>Clear Key PSSH Box Data</em></h4>
-            </div>
-            <div class="panel-body">
-              <pre><code>    clearkey_pssh_data {
-        unsigned int (8)                  <b>type</b>
-        if (type == 0) {
-            unsigned int(16)              <b>url_length</b>
-            unsigned int(8)[url_length]   <b>url (base64-encoded)</b>
-        }
-        else if (type == 1) {
-            unsigned int(16)              <b>jwk_length</b>
-            unsigned int(8)[jwk_length]   <b>jwk (base64-encoded)</b>
-        }
-    }</code></pre>
-
-              <ul>
-                <li><b><code>type</code></b> : A value of 0 indicates that the decryption keys will be retrieved from a remote server vi HTTP GET request to the provided URL.  A value of 1 indicates that the decryption keys are stored within the 'pssh' data.</li>
-                <li><b><code>url_length</code></b> : The length in bytes of the <code>url</code> field</li>
-                <li><b><code>url</code></b> : Base64-encoded, UTF-8 URL string that will be used to retrieve the keys required for this content.  The javascript application will simply issue an HTTP GET request to this URL to retrieve the decryption keys.  The HTTP response will be a JSON object that conforms to the JSON Web Key (JWK) definition referenced in the EME Clear Key specification.</li>
-                <li><b><code>jwk_length</code></b> : The length in bytes of the <code>jwk</code> field</li>
-                <li><b><code>jwk</code></b> : Base64-encoded, UTF-8 string representation of the JSON Web Key (JWK) object.  This object will be passed to the <span class="code">update()</span> EME API after Base64 decode and conversion to <span class="code">Uint8Array</span>.</li>
-              </ul>
-            </div>
-          </div>
-
+         <p>Here is the command-line usage for the ClearKey crypfile generation tool:</p>
           <div class="well">
             <pre><code class="scrollable-code">$ java -jar clearkey.jar -help
 CableLabs ClearKey MP4Box cryptfile generation tool.
@@ -469,27 +520,18 @@ usage:  CryptfileGen [OPTIONS] &lt;track_id&gt;:{@&lt;key_file&gt;|&lt;key_id&gt
     encrypted with each key before moving to the next.</code></pre>
           </div>
 
-          <p>We have arbitrarily and independently selected the GUID of <code>00000000-0000-0000-0000-000000000001</code> to use as the System ID for our Clear Key implementation.  This GUID is not regsistered with any central number registrar.  Below is an example MP4Box cryptfile showing an how our type 1 Clear Key implementation appears in a cryptfile.</p>
+          <h4 id="cenc">Common Encryption</h4>
 
-          <div class="well">
-            <pre><code>&lt;?xml version="1.0" encoding="UTF-8" standalone="no"?&gt;
-&lt;GPACDRM type="CENC AES-CTR"&gt;
-  &lt;DRMInfo type="pssh" version="0"&gt;
-    &lt;BS ID128="00000000000000000000000000000001"/&gt;
-    &lt;BS bits="8" value="1"/&gt;
-    &lt;BS bits="16" string="eyJrZXlzIjpbeyJrdHkiOiJvY3QiLCJhbGciOiJBMTI4R0NNIiwia2lkIjoiRUFBQUFCQUFFQUFRQUJBQUFBQUFBUSIsImsiOiJPaW9iYU4wcjJiTHVzbDZFeEhkbWFBIn0seyJrdHkiOiJvY3QiLCJhbGciOiJBMTI4R0NNIiwia2lkIjoiRUFBQUFCQUFFQUFRQUJBQUFBQUFBZyIsImsiOiJCK1RXVTgrMFhHWVZqWlAvemtJcEJ3In1dfQ=="/&gt;
-  &lt;/DRMInfo&gt;
-  &lt;CrypTrack IV_size="8" first_IV="0xac6d700f43cb2e03" isEncrypted="1" saiSavedBox="senc" trackID="1"&gt;
-    &lt;key KID="0x10000000100010001000100000000001" value="0x3a2a1b68dd2bd9b2eeb25e84c4776668"/&gt;
-  &lt;/CrypTrack&gt;
-  &lt;CrypTrack IV_size="8" first_IV="0x169dd6397f12c11a" isEncrypted="1" saiSavedBox="senc" trackID="2"&gt;
-    &lt;key KID="0x10000000100010001000100000000002" value="0x07e4d653cfb45c66158d93ffce422907"/&gt;
-  &lt;/CrypTrack&gt;
-&lt;/GPACDRM&gt;</code></pre>
-            </div>
-          </div>
+          <p>In previous versions of the EME specification, the ClearKey PSSH box was not defined, so CableLabs was forced to define its own.  Today, the EME <a href="https://w3c.github.io/encrypted-media/initdata-format-registry.html">Stream Format and Initialization Data Format Registry</a>, which describes how initialization data is to be carried in various media containers, defines the <a href="">cenc</a> initialiation data type for ISO Common Encryption.  Within this cenc registry entry, the ClearKey system ID (<span class="code">1077efec-c0b2-4d02-ace3-3c1e52e2fb4b</span>) and the PSSH box format is called out.  It identifies the ClearKey PSSH as a "Version 1" ISO CommonEncryption PSSH box which contains all KeyIDs used by the media.</p>
 
-          <h3 id="multi_drm">Common Encryption Multi-DRM</h3>
+          <p>We have enough now to allow us to create ClearKey-encrypted media, but the spec stops at that point.  The process of obtaining ClearKeys is left up to the implementer.  The CableLabs EME platform implements two examples ways to access these keys.</p>
+          <ol>
+            <li>Decryption key(s) contained within the player application.  The dash.js player's ClearKey implementation will look inside a ProtectionData object that can be associated with a media asset.  In the <a href="https://github.com/Dash-Industry-Forum/dash.js/tree/development/samples/dash-if-reference-player">example player application</a>, a <a href="https://github.com/Dash-Industry-Forum/dash.js/blob/development/samples/dash-if-reference-player/app/sources.json">JSON file</a> contains a large set of test media for trying out the player.  The JSON description for each asset can also specify the ProtectionData object and any clearkeys associated with it.  At playback-time, the player will automatically load these keys into the ClearKey CDM.</li>
+            <li>Decryption key(s) retrieved from a remote server (similar to real DRMs).  Keys may be transported securely over the network (e.g. via HTTPS) and are only in the clear within the javascript code running on the browser.  CableLabs has implemented a very primitive, node.js-based <a href="https://github.com/cablelabs/mse-eme/tree/master/create/encrypt/clearkey/server">ClearKey license server</a> that takes KeyIDs as query parameters and returns the associated keys from a hard-coded list.</li>
+          </ol>
+
+
+          <h3 id="cenc">Common Encryption Multi-DRM</h3>
 
           <p>One of the fundamental benfits of Common Encryption is the ability to encrypt content once while still supporting multiple proprietary DRM systems.  Up until this point, we have only demonstrated the encryption of content using a single DRM.  This section takes what we have learned in the previous sections and describes how to use MP4Box to encrypt a piece of content with multiple key systems that can be played back on the disparate platforms that support those systems.</p>
 
@@ -553,10 +595,6 @@ usage:  CryptfileGen [OPTIONS] &lt;track_id&gt;:{@&lt;key_file&gt;|&lt;key_id&gt
             <li><span class="code">-sample-groups-traf</span> The standard MP4Box behavior when generating fragmented MP4s is to place Sample Group Description ('sgpd') boxes in the Movie ('moov') box and the corresponding Sample To Group ('sbgp') boxes in the Movie Fragment ('moof') boxes.  This behavior is not allowed by the <a href="http://www.uvvuwiki.com/images/c/cb/CFFMediaFormat-1.1r1.pdf">DECE Common File Format</a> specification.  Microsoft's Internet Explorer 11 will <em>only</em> parse media files that conform to the CFF.</li>
             <li><span class="code">#video:id=2Mb</span> These suffix arguments to our input files tell MP4Box to do several things.  First, it allows us to tell MP4Box to demultiplex our mulitplexed input files and to use the first video (<span class="code">#video</span>) or audio (<span class="code">#video</span>) track from the file for a particular Representation.  It also allows us to specify attribute values on the Representation elements (id, bandwith, xlink, role) in the generated MPD.  Multiple attributes can be specified, separated by commas.</li>
           </ul>
-
-          <div class="alert alert-danger">
-            <b>NOTE:</b> DASH-AVC/264 requires the ContentProtection element in the MPD to be in the AdaptationSet.  MP4Box currently places the ContentProtection element in each Representation.  <b><em>You must manually edit your MPD to move the ContentProtection element(s) from any of the contained Representations in to the parent AdaptationSet.</em></b>
-          </div>
 
           <p>Here is an example MPD generated from command line shown above.  The content was encrypted using our Common Encryption tools with Microsoft PlayReady.  As you can see, there is no indication that PlayReady DRM is being used or if more than one DRM available to decrypt the content.  All of that is hidden by Common Encryption and will be discovered by the client player application at playback-time.</p>
 
