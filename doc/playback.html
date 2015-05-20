@@ -108,12 +108,14 @@
           </ul>
 
           <h2>dash.js Player</h2>
-          <p>The CableLabs player application is based on the <a href="https://github.com/Dash-Industry-Forum/dash.js/wiki">dashjs</a> reference implementation from the DASH Industry Forum.  Our version of the player can be found on <a href="https://github.com/cablelabs/dash.js">github</a> in the "development" branch.  We've added the following features:</p>
+          <p>CableLabs has played an integral role in adding support for protected content in the open-source <a href="https://github.com/Dash-Industry-Forum/dash.js/wiki">dash.js</a> reference implementation from the DASH Industry Forum.  Here are a list of features that you can find in the player:</p>
           <ul>
-            <li><strong>EME Debug Panel</strong>:  This expandable panel shows EME-specific log messages that hightlight the license retrieval process</li>
-            <li><strong>Widevine DRM</strong>:  Added support for the 'com.widevine.alpha' key system.  At his time the player expects the Widevine DRM proxy server to be running at 'http://localhost:8025'.  We will make this more configurable in the future.</li>
-            <li><strong>CableLabs Clear Key DRM</strong>:  Processing for the CableLabs-defined Clear Key PSSH and subsequent license retrieval. The player looks for a 'pssh' with the <code>00000000-0000-0000-0000-000000000001</code> guid we have assigned to our implementation of Clear Key, parses the data and then adds the key(s) (possibly retrieved from a remote server) to the browser using the EME <span class="code">update()</span> API.</li>
-            <li><strong>Common Encryption</strong>:  When dealing with content that only uses Common Encryption, there is no indication in the MPD of which DRMs are available in the content.  This update allows us to utilize the 'initData' (basically a concatenated list of the PSSH boxes) to determine which DRMs are supported and then compare that list against the DRMs supported by the browser.</li>
+            <li><strong>EME Abstraction API</strong>:  Due to the fact that the EME specification is just now gaining some stability, browser vendors have had to select different points in the lifetime of the spec at which to provide their implementation.  dash.js provides an EME abstraction API (which attempts to mimic the latest version of EME) that provides a consistent interface for app developers while still enabling protected content playback on a variety of user agents.</li>
+            <li><strong>Multi-DRM Support</strong>:  dash.js supports playback of Microsoft PlayReady, Google Widevine, and ClearKey.  Adobe Access DRM support is planned.</li>
+            <li><strong>Common Encryption and Multi-DRM</strong>:  dash.js supports the CommonEncryption (cenc) initialization data type.  PSSH data can be carried in the media or in the manifest (manifest initData takes priority).  App developers can override the default selection policy of dash.js to determine how a DRM is chosen based on media and browser capabilities.</li>
+            <li><strong>Flexible License Server Communications</strong>:  When developing a production player, your business needs will determine which license servers you contact and how you communicate with them.  dash.js contains an extensible mechanism for allowing applications to provide their own protocols (messages, HTTP headers, etc) for interaction with the license server.</li>
+            <li><strong>License Pre-Fetch</strong>:  When initialization data is present in the DASH manifest, it is possible to "pre-fetch" licenses for content wihtout downloading media segments  dash.js allows applications to parse manifests and perform EME operations outside the media player.  Pre-fetched licenses can then be attached to the media player when initiating playback to prevent delays in presenting the content.</li>
+            <li><strong>EME Demo Application</strong>:  A <a href="https://github.com/Dash-Industry-Forum/dash.js/blob/development/samples/dash-if-reference-player/eme.html">sample application</a> is provided that shows how to use the EME capabilities of the player to prefetch licenses, modify key session persistence and peform persistence operations, and attach license information to the media player for playback.  The application displays a graphical representation for each content item showing the DRM system in use, the key sessions, and status for all licenses.</li>
           </ul>
 
           <h2>FAMIUM Player</h2>
@@ -152,7 +154,7 @@
                 <td><img src="images/chrome.png" alt="Chrome Icon"> Chrome (Milestone 35)</td>
                 <td>Widevine, ClearKey</td>
                 <td>Yes</td>
-                <td>Yes<br>- MediaKeyNeededEvent attributes (unstable in the spec)</td>
+                <td>Yes</td>
               </tr>
               <tr>
                 <td>FAMIUM (Chromium, Milestone 30)</td>
@@ -167,12 +169,17 @@
 
           <h1 id="servers">License Servers</h1>
 
+          <h2>DRMToday</h2>
+
+          <p>The castLabs DRMToday multi-DRM licensing service provides content encryption and packaging capabilities as well as the license server for protected media.  <a href="http://drmtoday.com/contact">Contact</a> DRMToday to setup an account which will enable you to create content with the CableLabs tools and playback using the dash.js player.</p>
+
           <h2>Microsoft PlayReady Test Server</h2>
 
           <p>Microsoft provides a <a href="http://playready.directtaps.net/pr/svc/rightsmanager.asmx">test license server</a> that is chock full of features needed for testing your browser and CDM.  <a href="http://playready.directtaps.net/pr/doc/customrights/">The documentation page</a> details all of the supported query string arguments for requesting various types of licenses.  Also on this page, you can find the license server's <i>key seed</i> value.  This is the value used in our PlayReadyKeyGen tool to generate keys and checksums that will work with the test license server.  One additional feature of the test server is the ability to specify your own key value (via the <span class="code">ContentKey</span> query string arg).  This is a handy feature when you don't want the license server to select a key based on the key generation algorithm.  However, keep in mind that this does not emulate real-world security, since the key can be seen clearly in the URL request.</p>
 
-          <h2>Widevine CableLabs Test Server</h2>
-          Coming Soon
+          <h2>Widevine License Server</h2>
+
+          <p>Contact Google Widevine to setup your own customer portal on the Widevine license service.  The information they provide you will allow you to create content with the CableLabs encryption tools and to playback that content using dash.js</p>
 
           <h2>Adobe Test Server</h2>
           Coming Soon
