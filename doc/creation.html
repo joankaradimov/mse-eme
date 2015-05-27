@@ -463,12 +463,8 @@ usage:  CryptfileGen [OPTIONS] &lt;content_id&gt; &lt;track_id&gt;:&lt;track_typ
     is the integer number of keys requested.  &lt;sample_count&gt; is the number of consecutive
     samples to be encrypted with each key before moving to the next.
 
-  -ck_remote &lt;url&gt;
-    Add CableLabs 'Remote' ClearKey PSSH to the cryptfile.  &lt;url&gt; is the ClearKey server
-    URL.
-
-  -ck_json
-    Add CableLabs 'JSON' ClearKey PSSH to the cryptfile.
+  -ck
+    Add ClearKeyPSSH to the cryptfile.
 
   -cp
     Print a DASH &lt;ContentProtection&gt; element that can be pasted into the MPD
@@ -510,14 +506,12 @@ usage:  CryptfileGen [OPTIONS] &lt;track_id&gt;:{@&lt;key_file&gt;|&lt;key_id&gt
     If present, the cryptfile will be written to the given file. Otherwise output will be
     written to stdout.
 
-  -remote &lt;license_url&gt;
-    If present, the ClearKey PSSH for the content will indicate that the player should
-    contact the ClearKey server at the given URL for keys.  The default behavior is to
-    generate ClearKey PSSH with JSON Web Keys embedded directly
-
   -roll &lt;sample_count&gt;
     Used for rolling keys only.  &lt;sample_count&gt; is the number of consecutive samples to be
-    encrypted with each key before moving to the next.</code></pre>
+    encrypted with each key before moving to the next.
+
+  -cp
+    Print a DASH &lt;ContentProtection&gt; element that can be pasted into the MPD</code></pre>
           </div>
 
           <h4 id="cenc">Common Encryption</h4>
