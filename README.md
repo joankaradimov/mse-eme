@@ -23,14 +23,15 @@ Our tools will include support for proprietary and open DRM systems as documenta
 | DRM | Status | Notes |
 |-----|--------|-------|
 |Microsoft PlayReady|Working|Uses the [PlayReady test server](http://playready.directtaps.net/pr/doc/customrights/)|
-|Google Widevine|In Progress|Key request and message signing are working, but license request during playback is failing.  Users wishing to create signed requests will need to contact Widevine for a private test server and signing keys.|
+|Google Widevine|Working|Users will need to contact Widevine to setup their own license portal.|
 |CableLabs ClearKey|Working|CableLabs-specific implementation of [ClearKey](http://www.w3.org/TR/encrypted-media/#simple-decryption-clear-key)|
+|CastLabs [DRMToday](http://www.drmtoday.com)|Partial|Widevine is OK.  PlayReady license requests are being rejected in dash.js.  This could be a problem with dash.js and not the creation tools|
 |Adobe Access/PrimeTime|Not Started||
 |Apple FairPlay|Not Started||
 
 ## HTML5 Player Application
 
-For playback of encrypted DASH content using MSE/EME, we have augmented the dash.js player to support some additional DRMs.  Also, we have added an EME-specific logging window to highlight the EME process as it takes place.  Finally, we have improved support for playback of content that uses ISO Common Encryption.
+For playback of encrypted DASH content using MSE/EME, we have augmented the dash.js player with support for some additional DRMs, improved support for playback of content that uses ISO Common Encryption, and support for multiple EME versions available on production browsers..
 
 ## 3rd Party Acknowledgments
 
