@@ -69,11 +69,6 @@ public class ClearKeyPSSH extends DRMInfoPSSH {
     }
 
     @Override
-    protected void generatePSSHData(DataOutputStream dos) throws IOException {
-        dos.writeInt(0);
-    }
-
-    @Override
     public Node generateXML(Document d) {
         Element e = generateDRMInfo(d);
         return e;

@@ -63,7 +63,6 @@ public class DRMTodayPSSH extends DRMInfoPSSH {
      */
     @Override
     protected void generatePSSHData(DataOutputStream dos) throws IOException {
-        dos.writeInt(data.getData().length);
         dos.write(data.getData());
     }
     

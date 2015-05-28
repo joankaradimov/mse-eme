@@ -286,6 +286,7 @@ public class CryptfileGen {
             cencKey.variantId = variantId;
         }
         CencKeyAPI cencKeyAPI = new CencKeyAPI(drmtodayAuth, props.getFeHost(), props.getMerchant());
+        DRMInfoPSSH drmtodayPRPSSH = null;
         for (Track t : trackList) {
             cencKey.key = Base64.encodeBase64String(t.keypair.getKey());
             cencKey.keyId = Base64.encodeBase64String(t.keypair.getID());
@@ -298,6 +299,9 @@ public class CryptfileGen {
                     if ((WidevinePSSH.isWidevine(d.getSystemID()) && widevine) || 
                         (PlayReadyPSSH.isPlayReady(d.getSystemID()) && playreadyDT)) {
                         psshList.add(new DRMTodayPSSH(d));
+                    }
+                    if (PlayReadyPSSH.isPlayReady(d.getSystemID())) {
+                        drmtodayPRPSSH = new DRMTodayPSSH(d);
                     }
                 }
             }
@@ -355,6 +359,16 @@ public class CryptfileGen {
                     continue;
                 }
                 CryptfileBuilder.writeXML(d, System.out);
+            }
+            if (drmtodayPRPSSH != null) {
+                Document tmp = CryptfileBuilder.newDocument();
+                try {
+                    tmp.appendChild(drmtodayPRPSSH.generateContentProtection(tmp));
+                }
+                catch (IOException e) {
+                    System.out.println("Could not generate ContentProtection element!");
+                }
+                CryptfileBuilder.writeXML(tmp, System.out);
             }
             System.out.println("######################################################");
         }

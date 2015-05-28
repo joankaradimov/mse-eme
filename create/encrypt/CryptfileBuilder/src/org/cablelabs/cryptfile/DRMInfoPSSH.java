@@ -155,7 +155,12 @@ public abstract class DRMInfoPSSH implements MP4BoxXML {
         }
         
         // Write data
-        generatePSSHData(pssh);
+        ByteArrayOutputStream psshDataBAOS = new ByteArrayOutputStream();
+        DataOutputStream psshData = new DataOutputStream(psshDataBAOS);
+        generatePSSHData(psshData);
+        byte[] psshDataBytes = psshDataBAOS.toByteArray();
+        pssh.writeInt(psshDataBytes.length);
+        pssh.write(psshDataBytes);
         
         // Write length field at the start of the data
         byte[] psshByteArray = psshBytes.toByteArray();
@@ -172,7 +177,7 @@ public abstract class DRMInfoPSSH implements MP4BoxXML {
     
     /**
      * Child classes who provide PSSH in base64 as their content protection
-     * data should write their PSSH data here starting with
+     * data should write their PSSH data here starting after
      * the "DataSize" field
      * 
      * @param dos output stream for writing PSSH data

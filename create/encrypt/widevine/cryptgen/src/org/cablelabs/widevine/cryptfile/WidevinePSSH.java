@@ -84,9 +84,7 @@ public class WidevinePSSH extends DRMInfoPSSH {
      */
     @Override
     protected void generatePSSHData(DataOutputStream dos) throws IOException {
-        byte[] protoBytes = psshProto.toByteArray();
-        dos.writeInt(protoBytes.length);
-        dos.write(protoBytes);
+        dos.write(psshProto.toByteArray());
     }
 
     /*
