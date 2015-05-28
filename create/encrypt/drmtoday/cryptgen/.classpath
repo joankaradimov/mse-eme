@@ -11,5 +11,6 @@
 	<classpathentry kind="lib" path="/CryptfileBuilder/lib/google-gson-2.2.4/gson-2.2.4.jar"/>
 	<classpathentry combineaccessrules="false" kind="src" path="/PlayReadyCryptfileGen"/>
 	<classpathentry combineaccessrules="false" kind="src" path="/WidevineCryptfileGen"/>
+	<classpathentry combineaccessrules="false" kind="src" path="/AccessCryptfileGen"/>
 	<classpathentry kind="output" path="eclipsebin"/>
 </classpath>

@@ -34,6 +34,7 @@ import java.util.List;
 
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.codec.binary.Hex;
+import org.cablelabs.access.cryptfile.AccessPSSH;
 import org.cablelabs.clearkey.cryptfile.ClearKeyPSSH;
 import org.cablelabs.cmdline.CmdLine;
 import org.cablelabs.cryptfile.CryptKey;
@@ -110,6 +111,9 @@ public class CryptfileGen {
             System.out.println("\t-pr");
             System.out.println("\t\tAdd PlayReady PSSH to the cryptfile.");
             System.out.println("");
+            System.out.println("\t-ax");
+            System.out.println("\t\tAdd Access PSSH to the cryptfile.");
+            System.out.println("");
             System.out.println("\t-prdt");
             System.out.println("\t\tAdd PlayReady PSSH (provided by DRMToday) to the cryptfile.");
             System.out.println("");
@@ -151,6 +155,7 @@ public class CryptfileGen {
         boolean widevine = false;
         boolean playready = false;
         boolean playreadyDT = false;
+        boolean access = false;
         
         // Print content protection element?
         boolean printCP = false;
@@ -182,6 +187,9 @@ public class CryptfileGen {
                 }
                 else if ((subopts = cmdline.checkOption("-pr", args, i, 0)) != null) {
                     playready = true;
+                }
+                else if ((subopts = cmdline.checkOption("-ax", args, i, 0)) != null) {
+                    access = true;
                 }
                 else if ((subopts = cmdline.checkOption("-prdt", args, i, 0)) != null) {
                     playreadyDT = true;
@@ -300,25 +308,29 @@ public class CryptfileGen {
                         psshList.add(new DRMTodayPSSH(d));
                     }
                 }
+            
+                // Add our PlayReady and Access PSSH box if requested
+                if (playready) {
+                    PlayReadyKeyPair keyPair = new PlayReadyKeyPair(t.keypair);
+                    List<WRMHeader> headers = new ArrayList<WRMHeader>();
+                    headers.add(new WRMHeader(WRMHeader.Version.V_4000, keyPair, PlayReadyPSSH.TEST_URL));
+                    psshList.add(new PlayReadyPSSH(headers, PlayReadyPSSH.ContentProtectionType.CENC));
+                }
+                if (access) {
+                    List<byte[]> keyIDs = new ArrayList<byte[]>();
+                    keyIDs.add(t.keypair.getID());
+                    psshList.add(new AccessPSSH(keyIDs));
+                }
             }
             catch (Exception e) {
                 // TODO Auto-generated catch block
                 System.out.println("Error during Cenc key ingest! -- " + e.getMessage());
             }
             
-            // Add our PlayReady PSSH box if requested
-            if (playready) {
-                PlayReadyKeyPair keyPair = new PlayReadyKeyPair(t.keypair);
-                List<WRMHeader> headers = new ArrayList<WRMHeader>();
-                headers.add(new WRMHeader(WRMHeader.Version.V_4000, keyPair, PlayReadyPSSH.TEST_URL));
-                psshList.add(new PlayReadyPSSH(headers, PlayReadyPSSH.ContentProtectionType.CENC));
-            }
-            
             List<CryptKey> keyList = new ArrayList<CryptKey>();
             keyList.add(new CryptKey(t.keypair));
             cryptTracks.add(new CryptTrack(t.id, 8, null, keyList, 0));
         }
-        
         
         // Add clearkey PSSH if requested
         if (clearkey) {
