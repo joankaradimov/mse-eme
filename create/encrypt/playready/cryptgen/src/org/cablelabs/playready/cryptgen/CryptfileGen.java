@@ -222,7 +222,7 @@ public class CryptfileGen {
         
         // Create our PSSH
         List<DRMInfoPSSH> psshList = new ArrayList<DRMInfoPSSH>();
-        psshList.add(new PlayReadyPSSH(wrmHeaders));
+        psshList.add(new PlayReadyPSSH(wrmHeaders, PlayReadyPSSH.ContentProtectionType.CENC));
         
         // Add clearkey PSSH if requested
         if (clearkey) {

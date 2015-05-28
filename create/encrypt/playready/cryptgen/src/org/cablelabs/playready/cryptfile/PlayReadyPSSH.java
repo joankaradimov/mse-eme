@@ -58,11 +58,22 @@ public class PlayReadyPSSH extends DRMInfoPSSH {
     private List<WRMHeader> wrmHeaders;
     private int wrmHeadersSize = 0;
     private int proSize;
+    private ContentProtectionType cpType;
     
     /**
      * License server URL to use for testing
      */
     public static final String TEST_URL = "http://playready.directtaps.net/pr/svc/rightsmanager.asmx?PlayRight=1&UseSimpleNonPersistentLicense=1";
+    
+    /**
+     * Two different types of ContentProtection elements can be generated base on
+     * the PSSH data.  One is a custom Microsoft format (MSPRO) and the other
+     * is a standard CommonEncryption format (CENC)
+     */
+    public enum ContentProtectionType {
+        MSPRO,
+        CENC
+    };
 
     /**
      * Returns whether or not the given systemID is PlayReady
@@ -74,9 +85,10 @@ public class PlayReadyPSSH extends DRMInfoPSSH {
         return systemIDMatch(PLAYREADY_SYSTEM_ID, systemID);
     }
     
-    public PlayReadyPSSH(List<WRMHeader> wrmHeaders) {
+    public PlayReadyPSSH(List<WRMHeader> wrmHeaders, ContentProtectionType cpType) {
         super(PLAYREADY_SYSTEM_ID);
         this.wrmHeaders = wrmHeaders;
+        this.cpType = cpType;
         
         // Collect all of our WRMHeader data arrays so that we can calculate the
         // total size
@@ -97,44 +109,86 @@ public class PlayReadyPSSH extends DRMInfoPSSH {
     public Element generateContentProtection(Document d) throws IOException {
         Element e = super.generateContentProtection(d);
         
+        switch (cpType) {
         
-        Element pro = d.createElement(MSPRO_ELEMENT);
+            case CENC:
+                e.appendChild(generateCENCContentProtectionData(d));
+                break;
+                
+            case MSPRO:
+                Element pro = d.createElement(MSPRO_ELEMENT);
+                
+                // Generate base64-encoded PRO
+                ByteBuffer ba = ByteBuffer.allocate(4);
+                ba.order(ByteOrder.LITTLE_ENDIAN);
+                ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                DataOutputStream dos = new DataOutputStream(baos);
+                
+                // PlayReady Header Object Size field
+                ba.putInt(0, proSize);
+                dos.write(ba.array());
+                
+                // Number of Records field
+                ba.putShort(0, (short)wrmHeaders.size());
+                dos.write(ba.array(), 0, 2);
+                
+                for (WRMHeader header : wrmHeaders) {
+                    
+                    byte[] wrmData = header.getWRMHeaderData();
+                    
+                    // Record Type (always 1 for WRM Headers)
+                    ba.putShort(0, (short)1);
+                    dos.write(ba.array(), 0, 2);
+                    
+                    // Record Length
+                    ba.putShort(0, (short)wrmData.length);
+                    dos.write(ba.array(), 0, 2);
+                    
+                    // Data
+                    dos.write(wrmData);
+                }
+                
+                pro.setTextContent(Base64.encodeBase64String(baos.toByteArray()));
+                
+                e.appendChild(pro);
+                break;
+        }
         
-        // Generate base64-encoded PRO
-        ByteBuffer ba = ByteBuffer.allocate(4);
-        ba.order(ByteOrder.LITTLE_ENDIAN);
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        DataOutputStream dos = new DataOutputStream(baos);
+        return e;
+    }
+    
+    // Helper to convert ints of varying widths (in bytes), to a little endian byte array
+    private byte[] toLEBytes(int input, int width) {
+        byte[] retVal = new byte[width];
+        for (int i = 0; i < width; i++) {
+            retVal[i] = (byte)((input >> (i*8)) & 0xFF);
+        }
+        return retVal;
+    }
+    
+
+    @Override
+    protected void generatePSSHData(DataOutputStream dos) throws IOException {
         
         // PlayReady Header Object Size field
-        ba.putInt(0, proSize);
-        dos.write(ba.array());
+        dos.write(toLEBytes(proSize, 4));
         
         // Number of Records field
-        ba.putShort(0, (short)wrmHeaders.size());
-        dos.write(ba.array(), 0, 2);
+        dos.write(toLEBytes(wrmHeaders.size(), 2));
         
         for (WRMHeader header : wrmHeaders) {
             
             byte[] wrmData = header.getWRMHeaderData();
             
             // Record Type (always 1 for WRM Headers)
-            ba.putShort(0, (short)1);
-            dos.write(ba.array(), 0, 2);
+            dos.write(toLEBytes(1, 2));
             
             // Record Length
-            ba.putShort(0, (short)wrmData.length);
-            dos.write(ba.array(), 0, 2);
+            dos.write(toLEBytes(wrmData.length, 2));
             
             // Data
             dos.write(wrmData);
         }
-        
-        pro.setTextContent(Base64.encodeBase64String(baos.toByteArray()));
-        
-        e.appendChild(pro);
-        
-        return e;
     }
 
     /*

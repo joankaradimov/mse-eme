@@ -47,6 +47,8 @@ import org.cablelabs.drmtoday.CencKeyAPI;
 import org.cablelabs.drmtoday.PropsFile;
 import org.cablelabs.drmtoday.PsshData;
 import org.cablelabs.drmtoday.cryptfile.DRMTodayPSSH;
+import org.cablelabs.playready.PlayReadyKeyPair;
+import org.cablelabs.playready.WRMHeader;
 import org.cablelabs.playready.cryptfile.PlayReadyPSSH;
 import org.cablelabs.widevine.cryptfile.WidevinePSSH;
 import org.w3c.dom.Document;
@@ -108,6 +110,9 @@ public class CryptfileGen {
             System.out.println("\t-pr");
             System.out.println("\t\tAdd PlayReady PSSH to the cryptfile.");
             System.out.println("");
+            System.out.println("\t-prdt");
+            System.out.println("\t\tAdd PlayReady PSSH (provided by DRMToday) to the cryptfile.");
+            System.out.println("");
             System.out.println("\t-cp");
             System.out.println("\t\tPrint a DASH <ContentProtection> element (for each DRM) that can be pasted into the MPD");
         }
@@ -145,6 +150,7 @@ public class CryptfileGen {
         boolean clearkey = false;
         boolean widevine = false;
         boolean playready = false;
+        boolean playreadyDT = false;
         
         // Print content protection element?
         boolean printCP = false;
@@ -176,6 +182,9 @@ public class CryptfileGen {
                 }
                 else if ((subopts = cmdline.checkOption("-pr", args, i, 0)) != null) {
                     playready = true;
+                }
+                else if ((subopts = cmdline.checkOption("-prdt", args, i, 0)) != null) {
+                    playreadyDT = true;
                 }
                 else if ((subopts = cmdline.checkOption("-cp", args, i, 0)) != null) {
                     printCP = true;
@@ -223,6 +232,10 @@ public class CryptfileGen {
         
         if (assetId == null) {
             cmdline.errorExit("Must specify assetId!");
+        }
+        
+        if (playready && playreadyDT) {
+            cmdline.errorExit("Can not specify both -pr and -prdt!");
         }
         
         // Validate track stream types.  Can have AUDIO and/or VIDEO or VIDEO_AUDIO
@@ -281,8 +294,9 @@ public class CryptfileGen {
                 String resp = cencKeyAPI.ingestKey(cencKey);
                 List<PsshData> psshdata = PsshData.parseFromDrmTodayJson(resp);
                 for (PsshData d : psshdata) {
+                    // Add DRMToday PSSH boxes if requested
                     if ((WidevinePSSH.isWidevine(d.getSystemID()) && widevine) || 
-                        (PlayReadyPSSH.isPlayReady(d.getSystemID()) && playready)) {
+                        (PlayReadyPSSH.isPlayReady(d.getSystemID()) && playreadyDT)) {
                         psshList.add(new DRMTodayPSSH(d));
                     }
                 }
@@ -292,10 +306,19 @@ public class CryptfileGen {
                 System.out.println("Error during Cenc key ingest! -- " + e.getMessage());
             }
             
+            // Add our PlayReady PSSH box if requested
+            if (playready) {
+                PlayReadyKeyPair keyPair = new PlayReadyKeyPair(t.keypair);
+                List<WRMHeader> headers = new ArrayList<WRMHeader>();
+                headers.add(new WRMHeader(WRMHeader.Version.V_4000, keyPair, PlayReadyPSSH.TEST_URL));
+                psshList.add(new PlayReadyPSSH(headers, PlayReadyPSSH.ContentProtectionType.CENC));
+            }
+            
             List<CryptKey> keyList = new ArrayList<CryptKey>();
             keyList.add(new CryptKey(t.keypair));
             cryptTracks.add(new CryptTrack(t.id, 8, null, keyList, 0));
         }
+        
         
         // Add clearkey PSSH if requested
         if (clearkey) {

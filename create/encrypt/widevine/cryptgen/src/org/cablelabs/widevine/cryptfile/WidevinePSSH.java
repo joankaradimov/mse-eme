@@ -74,11 +74,7 @@ public class WidevinePSSH extends DRMInfoPSSH {
     @Override
     public Element generateContentProtection(Document d) throws IOException {
         Element e = super.generateContentProtection(d);
-        
-        Element pssh = d.createElement(CENC_PSSH_ELEMENT);
-        pssh.setTextContent(getPSSHBase64());
-        e.appendChild(pssh);
-        
+        e.appendChild(generateCENCContentProtectionData(d));
         return e;
     }
 

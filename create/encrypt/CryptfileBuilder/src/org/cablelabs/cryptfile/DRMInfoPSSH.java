@@ -117,13 +117,17 @@ public abstract class DRMInfoPSSH implements MP4BoxXML {
     }
     
     /**
-     * Can be used by child classes to generate a base64-encoded version
-     * of the PSSH for inclusion in ContentProtection elements
+     * Can be used by child classes to generate a $ltcenc:pssh&gt; element for
+     * for inclusion in ContentProtection elements
      * 
-     * @return base64-encoded PSSH
+     * @param d the document that will hold the element
+     * @return the cenc:pssh element
      * @throws IOException
      */
-    protected String getPSSHBase64() throws IOException {
+    protected Element generateCENCContentProtectionData(Document d) throws IOException {
+        
+        Element psshElem = d.createElement(CENC_PSSH_ELEMENT);
+        
         ByteArrayOutputStream psshBytes = new ByteArrayOutputStream();
         DataOutputStream pssh = new DataOutputStream(psshBytes);
         
@@ -161,7 +165,9 @@ public abstract class DRMInfoPSSH implements MP4BoxXML {
         psshByteArray[2] = (byte)((size >>  8) & 0xFF);
         psshByteArray[3] = (byte)((size      ) & 0xFF);
         
-        return Base64.encodeBase64String(psshByteArray);
+        psshElem.setTextContent(Base64.encodeBase64String(psshByteArray));
+        
+        return psshElem;
     }
     
     /**
