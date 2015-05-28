@@ -33,6 +33,7 @@
   <property name="playready-dir" location="playready/cryptgen" />
   <property name="widevine-dir" location="widevine/cryptgen" />
   <property name="drmtoday-dir" location="drmtoday/cryptgen" />
+  <property name="access-dir" location="access/cryptgen" />
 
   <!-- Libraries -->
   <property name="commons-codec-jar" location="${builder-dir}/lib/commons-codec/commons-codec-1.9.jar" />
@@ -42,7 +43,7 @@
   <property name="httpclient-jar" location="${drmtoday-dir}/lib/httpcomponents-client-4.4.1/lib/httpclient-4.4.1.jar" />
   <property name="httpcore-jar" location="${drmtoday-dir}/lib/httpcomponents-client-4.4.1/lib/httpcore-4.4.1.jar" />
 
-  <target name="all" depends="cryptfile-builder,clearkey,playready,widevine,drmtoday" />
+  <target name="all" depends="cryptfile-builder,clearkey,playready,widevine,access,drmtoday" />
 
   <target name="clean">
     <delete dir="${builder-dir}/bin" />
@@ -54,6 +55,8 @@
     <delete file="${widevine-dir}/widevine.jar" />
     <delete dir="${drmtoday-dir}/bin" />
     <delete file="${drmtoday-dir}/drmtoday.jar" />
+    <delete dir="${access-dir}/bin" />
+    <delete file="${access-dir}/access.jar" />
   </target>
 
   <target name="cryptfile-builder">
@@ -112,15 +115,22 @@
     <mkdir dir="${drmtoday-dir}/bin" />
     <javac includeantruntime="false"
       srcdir="${drmtoday-dir}/src" destdir="${drmtoday-dir}/bin"
-      classpath="${builder-dir}/bin:${clearkey-dir}/bin/:${widevine-dir}/bin/:${playready-dir}/bin/:${commons-codec-jar}:${gson-jar}:${protobuf-jar}:${commons-logging-jar}:${httpclient-jar}:${httpcore-jar}" />
+      classpath="${builder-dir}/bin:${clearkey-dir}/bin/:${widevine-dir}/bin/:${playready-dir}/bin/:${access-dir}/bin:${commons-codec-jar}:${gson-jar}:${protobuf-jar}:${commons-logging-jar}:${httpclient-jar}:${httpcore-jar}" />
     <jar destfile="${drmtoday-dir}/drmtoday.jar" basedir="${drmtoday-dir}/bin">
       <manifest>
         <attribute name="Main-Class"
           value="org.cablelabs.drmtoday.cryptgen.CryptfileGen" />
         <attribute name="Class-Path"
-          value="${builder-dir}/bin/ ${commons-codec-jar} ${gson-jar} ${clearkey-dir}/bin/ ${widevine-dir}/bin/ ${playready-dir}/bin/ ${commons-logging-jar} ${httpclient-jar} ${httpcore-jar}" />
+          value="${builder-dir}/bin/ ${commons-codec-jar} ${gson-jar} ${clearkey-dir}/bin/ ${widevine-dir}/bin/ ${playready-dir}/bin/ ${access-dir}/bin/ ${commons-logging-jar} ${httpclient-jar} ${httpcore-jar}" />
       </manifest>
     </jar>
+  </target>
+
+  <target name="access" depends="cryptfile-builder">
+    <mkdir dir="${access-dir}/bin" />
+    <javac includeantruntime="false"
+      srcdir="${access-dir}/src" destdir="${access-dir}/bin" 
+      classpath="${builder-dir}/bin/" />
   </target>
 
 </project>

@@ -1,4 +1,7 @@
 
 **/*.jar
+**/*.class
 **/node_modules
+**/eclipsebin/
+**/bin
 
