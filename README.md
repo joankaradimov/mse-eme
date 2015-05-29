@@ -25,7 +25,7 @@ Our tools will include support for proprietary and open DRM systems as documenta
 |Microsoft PlayReady|Working|Uses the [PlayReady test server](http://playready.directtaps.net/pr/doc/customrights/)|
 |Google Widevine|Working|Users will need to contact Widevine to setup their own license portal.|
 |CableLabs ClearKey|Working|CableLabs-specific implementation of [ClearKey](http://www.w3.org/TR/encrypted-media/#simple-decryption-clear-key)|
-|CastLabs [DRMToday](http://www.drmtoday.com)|Partial|Widevine is OK.  PlayReady license requests are being rejected in dash.js.  This could be a problem with dash.js and not the creation tools|
+|CastLabs [DRMToday](http://www.drmtoday.com)|Working|Support for PlayReady and Widevine (Access coming soon)|
 |Adobe Access/PrimeTime|Not Started||
 |Apple FairPlay|Not Started||
 
