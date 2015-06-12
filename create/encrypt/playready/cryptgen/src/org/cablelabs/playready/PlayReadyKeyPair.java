@@ -167,11 +167,6 @@ public class PlayReadyKeyPair extends KeyPair {
         return checksum;
     }
     
-    private void prepareKeyIDAndChecksum() {
-        this.mskeyID = binaryEncodeMSGUID(this.keyID);
-        this.checksum = generateChecksum(mskeyID, key);
-    }
-    
     /**
      * Create a key from pre-existing key data
      * 
@@ -182,7 +177,8 @@ public class PlayReadyKeyPair extends KeyPair {
     public PlayReadyKeyPair(String keyID, byte[] key, byte[] keySeed) {
         super(keyID, key);
         this.keySeed = keySeed;
-        prepareKeyIDAndChecksum();
+        this.mskeyID = binaryEncodeMSGUID(this.keyID);
+        this.checksum = generateChecksum(mskeyID, key);
     }
 
     /**
@@ -196,9 +192,10 @@ public class PlayReadyKeyPair extends KeyPair {
     public PlayReadyKeyPair(String keyID, byte[] keySeed) {
         super();
         this.keyID = parseGUID(keyID);
+        this.mskeyID = binaryEncodeMSGUID(this.keyID);
         this.key = generateKey(this.mskeyID, keySeed);
+        this.checksum = generateChecksum(mskeyID, key);
         this.keySeed = keySeed;
-        prepareKeyIDAndChecksum();
     }
     
     /**
@@ -213,8 +210,9 @@ public class PlayReadyKeyPair extends KeyPair {
     public PlayReadyKeyPair(String keyID) {
         super();
         this.keyID = parseGUID(keyID);
+        this.mskeyID = binaryEncodeMSGUID(this.keyID);
         this.key = generateKey(this.mskeyID, keySeed);
-        prepareKeyIDAndChecksum();
+        this.checksum = generateChecksum(mskeyID, key);
     }
     
     /**
@@ -225,7 +223,8 @@ public class PlayReadyKeyPair extends KeyPair {
     public PlayReadyKeyPair(KeyPair kp) {
         super(kp);
         keySeed = null;
-        prepareKeyIDAndChecksum();
+        this.mskeyID = binaryEncodeMSGUID(this.keyID);
+        this.checksum = generateChecksum(mskeyID, key);
     }
 
     /**
