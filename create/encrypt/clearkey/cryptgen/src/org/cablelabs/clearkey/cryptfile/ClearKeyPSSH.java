@@ -26,7 +26,6 @@
 
 package org.cablelabs.clearkey.cryptfile;
 
-import java.io.DataOutputStream;
 import java.io.IOException;
 
 import org.cablelabs.cryptfile.DRMInfoPSSH;

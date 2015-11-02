@@ -29,6 +29,7 @@ package org.cablelabs.cryptfile;
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.util.HashSet;
 
 import org.apache.commons.codec.binary.Base64;
 import org.w3c.dom.Document;
@@ -99,7 +100,20 @@ public abstract class DRMInfoPSSH implements MP4BoxXML {
         
         this.systemID = systemID;
         this.psshVersion = psshVersion;
-        this.keyIDs = keyIDs;
+
+        // Remove any duplicate keyIDs
+        HashSet<String> hs = new HashSet<String>();
+        for (byte[] keyID : keyIDs) {
+            String guid = KeyPair.toGUID(keyID);
+            if (!hs.contains(guid)) {
+                hs.add(guid);
+            }
+        }
+        this.keyIDs = new byte[hs.size()][];
+        int i = 0;
+        for (String s : hs) {
+            this.keyIDs[i++] = KeyPair.parseGUID(s);
+        }
     }
     
     /**
