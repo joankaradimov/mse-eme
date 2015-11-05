@@ -208,8 +208,8 @@ public class CryptfileGen {
         for (KeyPair keypair : keypairs) {
             System.out.println("\t" + Hex.encodeHexString(keypair.getID()) +
                                " : " + Hex.encodeHexString(keypair.getKey()) +
-                               " (" + Base64.encodeBase64String(keypair.getID()) +
-                               " : " + Base64.encodeBase64String(keypair.getKey()) + ")");
+                               " (" + Base64.encodeBase64URLSafeString(keypair.getID()) +
+                               " : " + Base64.encodeBase64URLSafeString(keypair.getKey()) + ")");
             keyIDs[i++] = keypair.getID();
         }
         System.out.println("");
