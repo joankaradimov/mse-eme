@@ -183,7 +183,7 @@ public class KeyRequest {
         requestMessage.content_id = Base64.encodeBase64String(content_id.getBytes());
         requestMessage.policy = POLICY;
         requestMessage.client_id = CLIENT_ID;
-        requestMessage.drm_types = DRM_TYPES;
+        //requestMessage.drm_types = DRM_TYPES;
         
         // Add the track requests to the message
         requestMessage.tracks = new RequestMessage.Track[tracks.size()];
