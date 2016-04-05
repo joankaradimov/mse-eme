@@ -40,7 +40,7 @@ public class RequestMessage {
     String content_id;
     String policy;
     String client_id;
-    String drm_types[];
+    //String drm_types[];
     Track tracks[];
     String token;
     String rsa_public_key;
