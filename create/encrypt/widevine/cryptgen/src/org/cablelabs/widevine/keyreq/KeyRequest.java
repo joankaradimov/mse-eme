@@ -53,7 +53,7 @@ public class KeyRequest {
     
     private static final String POLICY = "";
     private static final String CLIENT_ID = null;
-    private static final String[] DRM_TYPES = { "WIDEVINE" };
+    private static final String[] DRM_TYPES = { "WIDEVINE", "PLAYREADY" };
     
     private static final String TEST_PROVIDER   = "widevine_test";
     private static final String TEST_SERVER_URL = "https://license.uat.widevine.com/cenc/getcontentkey/widevine_test";
