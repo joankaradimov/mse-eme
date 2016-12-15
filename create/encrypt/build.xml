@@ -133,4 +133,17 @@
       classpath="${builder-dir}/bin/" />
   </target>
 
+  <target name="alljar" depends="cryptfile-builder, clearkey, playready, widevine, access, drmtoday">
+    <mkdir dir="bin" />
+    <copy todir="bin" overwrite="false">
+      <fileset dir="${builder-dir}/bin" />
+      <fileset dir="${clearkey-dir}/bin" />
+      <fileset dir="${playready-dir}/bin" />
+      <fileset dir="${widevine-dir}/bin" />
+      <fileset dir="${access-dir}/bin" />
+      <fileset dir="${drmtoday-dir}/bin" />
+    </copy>
+    <jar destfile="bin/all.jar" basedir="bin" />
+  </target>
+
 </project>
