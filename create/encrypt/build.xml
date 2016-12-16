@@ -57,6 +57,7 @@
     <delete file="${drmtoday-dir}/drmtoday.jar" />
     <delete dir="${access-dir}/bin" />
     <delete file="${access-dir}/access.jar" />
+    <delete dir="${basedir}/bin" />
   </target>
 
   <target name="cryptfile-builder">
@@ -134,16 +135,15 @@
   </target>
 
   <target name="alljar" depends="cryptfile-builder, clearkey, playready, widevine, access, drmtoday">
-    <mkdir dir="bin" />
-    <copy todir="bin" overwrite="false">
+    <mkdir dir="${basedir}/bin" />
+    <jar destfile="${basedir}/bin/all.jar">
       <fileset dir="${builder-dir}/bin" />
       <fileset dir="${clearkey-dir}/bin" />
       <fileset dir="${playready-dir}/bin" />
       <fileset dir="${widevine-dir}/bin" />
       <fileset dir="${access-dir}/bin" />
       <fileset dir="${drmtoday-dir}/bin" />
-    </copy>
-    <jar destfile="bin/all.jar" basedir="bin" />
+    </jar>
   </target>
 
 </project>
