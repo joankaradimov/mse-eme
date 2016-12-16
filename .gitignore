@@ -4,4 +4,6 @@
 **/node_modules
 **/eclipsebin/
 **/bin
+create/encrypt/mvn-repo
+create/encrypt/mse-eme.xml
 

@@ -27,7 +27,17 @@
 
 <project name="MP4Box Cryptfile Generators" default="all" basedir=".">
 
+  <target name="init">
+    <!-- Maven ant tasks registration -->
+    <path id="maven-ant-tasks.classpath"
+          path="${basedir}/lib/maven-ant-tasks-2.1.3.jar" />
+    <typedef resource="org/apache/maven/artifact/ant/antlib.xml"
+             uri="urn:maven-artifact-ant"
+             classpathref="maven-ant-tasks.classpath"/>
+   </target>
+
   <!-- Proejct paths -->
+  <property name="version" value="1.0" />
   <property name="builder-dir" location="CryptfileBuilder" />
   <property name="clearkey-dir" location="clearkey/cryptgen" />
   <property name="playready-dir" location="playready/cryptgen" />
@@ -58,12 +68,13 @@
     <delete dir="${access-dir}/bin" />
     <delete file="${access-dir}/access.jar" />
     <delete dir="${basedir}/bin" />
+    <delete dir="${basedir}/mvn-repo" />
   </target>
 
   <target name="cryptfile-builder">
     <mkdir dir="${builder-dir}/bin" />
     <javac includeantruntime="false"
-      srcdir="${builder-dir}/src" destdir="${builder-dir}/bin" 
+      srcdir="${builder-dir}/src" destdir="${builder-dir}/bin"
       classpath="${builder-dir}/bin/:${commons-codec-jar}:${gson-jar}" />
   </target>
 
@@ -130,7 +141,7 @@
   <target name="access" depends="cryptfile-builder">
     <mkdir dir="${access-dir}/bin" />
     <javac includeantruntime="false"
-      srcdir="${access-dir}/src" destdir="${access-dir}/bin" 
+      srcdir="${access-dir}/src" destdir="${access-dir}/bin"
       classpath="${builder-dir}/bin/" />
   </target>
 
@@ -146,4 +157,23 @@
     </jar>
   </target>
 
+  <target name="generate-artifact" xmlns:artifact="urn:maven-artifact-ant" depends="init, alljar">
+    <artifact:pom id="maven-pom" groupId="org.cablelabs" artifactId="mse-eme" version="${version}" name="MSE/EME">
+      <license name="BSD-2" url="https://opensource.org/licenses/BSD-2-Clause"/>
+      <dependency groupId="commons-codec" artifactId="commons-codec" version="1.10"/>
+      <dependency groupId="com.google.code.gson" artifactId="gson" version="2.8.0"/>
+      <dependency groupId="com.google.protobuf" artifactId="protobuf-java" version="3.1.0"/>
+      <dependency groupId="org.apache.httpcomponents" artifactId="httpclient" version="4.5.2"/>
+      <dependency groupId="org.apache.httpcomponents" artifactId="httpcore" version="4.4.5"/>
+    </artifact:pom>
+    <artifact:writepom pomRefId="maven-pom" file="${basedir}/mse-eme.xml"/>
+
+    <!-- This is done to circumvent a bug in maven-ant-tasks -->
+    <!-- https://stackoverflow.com/questions/4887018/artifactinstall-pushes-the-super-pom-instead-of-the-pom-i-define/8049402#8049402 -->
+    <artifact:pom id="disk-based.pom" file="${basedir}/mse-eme.xml" />
+    <artifact:deploy file="bin/all.jar">
+      <remoteRepository url="file://${basedir}/mvn-repo"/>
+      <pom refid="disk-based.pom"/>
+    </artifact:deploy>
+  </target>
 </project>
