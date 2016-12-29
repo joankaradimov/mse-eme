@@ -31,6 +31,8 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.OutputStream;
+import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
@@ -76,6 +78,9 @@ public class CryptfileGen {
             System.out.println("\t-help");
             System.out.println("\t\tDisplay this usage message.");
             System.out.println("");
+            System.out.println("\t-quiet");
+            System.out.println("\t\tDo not log information on stdout.");
+            System.out.println("");
             System.out.println("\t-out <filename>");
             System.out.println("\t\tIf present, the cryptfile will be written to the given file. Otherwise output will be");
             System.out.println("\t\twritten to stdout.");
@@ -106,6 +111,8 @@ public class CryptfileGen {
         
         String outfile = null;
         List<Track> tracks = new ArrayList<Track>();
+
+        PrintStream outputStream = System.out;
         
         // Parse arguments
         for (int i = 0; i < args.length; i++) {
@@ -127,6 +134,12 @@ public class CryptfileGen {
                 }
                 else if ((subopts = cmdline.checkOption("-cp", args, i, 0)) != null) {
                     printCP = true;
+                }
+                else if ((subopts = cmdline.checkOption("-quiet", args, i, 0)) != null) {
+                    outputStream = new PrintStream(new OutputStream() {
+                        public void write(int b) {
+                        }
+                    });
                 }
                 else {
                     cmdline.errorExit("Illegal argument: " + args[i]);
@@ -204,15 +217,15 @@ public class CryptfileGen {
         
         byte[][] keyIDs = new byte[keypairs.size()][];
         int i = 0;
-        System.out.println("Ensure the following keys are available to the client:");
+        outputStream.println("Ensure the following keys are available to the client:");
         for (KeyPair keypair : keypairs) {
-            System.out.println("\t" + Hex.encodeHexString(keypair.getID()) +
+            outputStream.println("\t" + Hex.encodeHexString(keypair.getID()) +
                                " : " + Hex.encodeHexString(keypair.getKey()) +
                                " (" + Base64.encodeBase64URLSafeString(keypair.getID()) +
                                " : " + Base64.encodeBase64URLSafeString(keypair.getKey()) + ")");
             keyIDs[i++] = keypair.getID();
         }
-        System.out.println("");
+        outputStream.println("");
         ckPSSH = new ClearKeyPSSH(keyIDs);
         
         List<DRMInfoPSSH> psshList = new ArrayList<DRMInfoPSSH>();
@@ -220,19 +233,19 @@ public class CryptfileGen {
         
         // Print ContentProtection element
         if (printCP) {
-            System.out.println("############# Content Protection Element #############");
+            outputStream.println("############# Content Protection Element #############");
             for (DRMInfoPSSH pssh : psshList) {
                 Document d = CryptfileBuilder.newDocument();
                 try {
                     d.appendChild(pssh.generateContentProtection(d));
                 }
                 catch (IOException e) {
-                    System.out.println("Could not generate ContentProtection element!");
+                    outputStream.println("Could not generate ContentProtection element!");
                     continue;
                 }
-                CryptfileBuilder.writeXML(d, System.out);
+                CryptfileBuilder.writeXML(d, outputStream);
             }
-            System.out.println("######################################################");
+            outputStream.println("######################################################");
         }
         
         CryptfileBuilder cfBuilder = new CryptfileBuilder(CryptfileBuilder.ProtectionScheme.AES_CTR,
@@ -240,10 +253,10 @@ public class CryptfileGen {
         
         // Write the output
         Document d = cfBuilder.buildCryptfile();
-        CryptfileBuilder.writeXML(d, System.out);
+        CryptfileBuilder.writeXML(d, outputStream);
         if (outfile != null) {
             try {
-                System.out.println("Writing cryptfile to: " + outfile);
+                outputStream.println("Writing cryptfile to: " + outfile);
                 CryptfileBuilder.writeXML(d, new FileOutputStream(outfile));
             }
             catch (FileNotFoundException e) {

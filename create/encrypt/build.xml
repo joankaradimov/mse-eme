@@ -37,7 +37,7 @@
    </target>
 
   <!-- Proejct paths -->
-  <property name="version" value="1.0" />
+  <property name="version" value="1.1.0" />
   <property name="builder-dir" location="CryptfileBuilder" />
   <property name="clearkey-dir" location="clearkey/cryptgen" />
   <property name="playready-dir" location="playready/cryptgen" />
